@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense Multijoueur</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <script>
+    // Variable globale pour la map sélectionnée
+    let selectedMap = 'standard';
+  </script>
+  <div id="app">
+    <!-- Écran de connexion -->
+    <div id="auth-screen" class="screen active">
+      <div class="auth-container">
+        <h1>🎮 Tower Defense Multijoueur</h1>
+        <div class="auth-form" id="login-form">
+          <h2>Connexion</h2>
+          <input type="text" id="login-username" placeholder="Nom d'utilisateur" />
+          <input type="password" id="login-password" placeholder="Mot de passe" />
+          <button onclick="login()">Se connecter</button>
+          <p>Pas de compte ? <a href="#" onclick="showRegister()">S'inscrire</a></p>
+        </div>
+        <div class="auth-form hidden" id="register-form">
+          <h2>Inscription</h2>
+          <input type="text" id="register-username" placeholder="Nom d'utilisateur" />
+          <input type="password" id="register-password" placeholder="Mot de passe" />
+          <button onclick="register()">Créer un compte</button>
+          <p>Déjà un compte ? <a href="#" onclick="showLogin()">Se connecter</a></p>
+        </div>
+        <div id="auth-error" class="error-message"></div>
+      </div>
+    </div>
+
+    <!-- Écran du lobby -->
+    <div id="lobby-screen" class="screen">
+      <div class="lobby-container">
+        <h1>Lobby</h1>
+        <div class="user-info">
+          <span id="username-display"></span>
+          <button onclick="logout()">Déconnexion</button>
+        </div>
+        <div class="lobby-buttons">
+          <button onclick="createRoom()" class="btn-primary">Créer un salon</button>
+          <div class="join-room">
+            <input type="text" id="room-code-input" placeholder="Code du salon" maxlength="6" />
+            <button onclick="joinRoom()">Rejoindre</button>
+          </div>
+        </div>
+        <div id="lobby-error" class="error-message"></div>
+      </div>
+    </div>
+
+    <!-- Écran de la salle d'attente -->
+    <div id="room-screen" class="screen">
+      <div class="room-container">
+        <h1>Salle d'attente</h1>
+        <div class="room-info">
+          <div class="room-code">Code: <span id="room-code"></span></div>
+          <button onclick="copyRoomCode()">📋 Copier</button>
+        </div>
+        <div class="players-list">
+          <h3>Joueurs (<span id="player-count">0</span>)</h3>
+          <ul id="players-list"></ul>
+        </div>
+        
+        <!-- Configuration de la partie (visible seulement pour l'hôte) -->
+        <div id="game-settings" class="game-settings hidden">
+          <h3>⚙️ Configuration de la partie</h3>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <label for="starting-money">💰 Argent de départ:</label>
+              <input type="number" id="starting-money" min="100" max="5000" step="100" value="500" />
+            </div>
+            <div class="setting-item">
+              <label for="max-health">❤️ Points de vie:</label>
+              <input type="number" id="max-health" min="5" max="100" step="5" value="20" />
+            </div>
+            <div class="setting-item">
+              <label for="monster-intensity">👹 Intensité monstres:</label>
+              <select id="monster-intensity">
+                <option value="0.8">Facile (-20%)</option>
+                <option value="1.0" selected>Normal</option>
+                <option value="1.2">Difficile (+20%)</option>
+                <option value="1.5">Très difficile (+50%)</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="reward-multiplier">📊 Multiplicateur de récompenses:</label>
+              <select id="reward-multiplier">
+                <option value="0.5">Réduit (-50%)</option>
+                <option value="1.0" selected>Normal</option>
+                <option value="1.5">Augmenté (+50%)</option>
+                <option value="2.0">Doublé (+100%)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sélection de la Map (visible seulement pour l'hôte) -->
+        <div id="map-selection" class="map-selection hidden">
+          <h3>🗺️ Sélection de la carte</h3>
+          <select id="map-select" onchange="changeMap(this.value)" disabled>
+            <option value="standard">Standard - Chemin simple en zigzag</option>
+            <option value="spiral">Spirale - Chemin en spirale</option>
+            <option value="straight">Droit - Chemin droit de haut en bas</option>
+            <option value="serpent">Serpent - Chemin sinueux</option>
+          </select>
+          <div class="map-info">
+            <p><strong id="map-name">Standard</strong></p>
+            <p id="map-description">Chemin simple en zigzag</p>
+          </div>
+        </div>
+        
+        <div class="room-actions">
+          <button onclick="startGame()" id="start-button" class="btn-primary" disabled>Démarrer la partie</button>
+          <button onclick="leaveRoom()" class="btn-secondary">Quitter le salon</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Écran du jeu -->
+    <div id="game-screen" class="screen">
+      <div class="game-wrapper">
+        <!-- Panneau gauche: Tours -->
+        <div class="game-panel left-panel">
+          <h3>🏗️ Tours</h3>
+          <div class="tower-shop">
+            <button class="tower-btn" onclick="selectTower('basic')" title="Tour Basique - 100💰">
+              <div class="tower-icon">🔷</div>
+              <div class="tower-name">Basique</div>
+              <div class="tower-stats" id="tower-basic-damage">10 dégâts</div>
+              <div class="cost">💰 100</div>
+            </button>
+            <button class="tower-btn" onclick="selectTower('sniper')" title="Tour Sniper - 200💰">
+              <div class="tower-icon">🎯</div>
+              <div class="tower-name">Sniper</div>
+              <div class="tower-stats" id="tower-sniper-damage">50 dégâts</div>
+              <div class="cost">💰 200</div>
+            </button>
+            <button class="tower-btn" onclick="selectTower('rapid')" title="Tour Rapide - 150💰">
+              <div class="tower-icon">⚡</div>
+              <div class="tower-name">Rapide</div>
+              <div class="tower-stats" id="tower-rapid-damage">5 dégâts</div>
+              <div class="cost">💰 150</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Centre: Jeu -->
+        <div class="game-center">
+          <!-- Haut: Stats -->
+          <div class="game-panel top-panel">
+            <div class="stat-item">
+              <span class="stat-icon">💰</span>
+              <div class="stat-content">
+                <span class="stat-label">Argent</span>
+                <span class="stat-value" id="money">500</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">❤️</span>
+              <div class="stat-content">
+                <span class="stat-label">Vie</span>
+                <span class="stat-value" id="health">20</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">💀</span>
+              <div class="stat-content">
+                <span class="stat-label">Kills</span>
+                <span class="stat-value" id="kills">0</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">🌊</span>
+              <div class="stat-content">
+                <span class="stat-label">Vague</span>
+                <span class="stat-value" id="wave-display">1</span>
+              </div>
+            </div>
+            <button onclick="toggleResearchPanel()" class="btn-research-toggle">🔬 Recherche</button>
+            <button onclick="quitGame()" class="btn-quit">🚪 Quitter</button>
+          </div>
+
+          <!-- Centre: Carte de jeu -->
+          <div id="game-container"></div>
+        </div>
+
+        <!-- Panneau droit: Monstres et Classement -->
+        <div class="game-panel right-panel">
+          <!-- Section Classement -->
+          <div class="right-section">
+            <h3>🏆 Classement</h3>
+            <div class="leaderboard-content">
+              <div id="leaderboard-list" class="leaderboard-list">
+                <!-- Rempli dynamiquement par le JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="panel-divider"></div>
+
+          <!-- Section Monstres -->
+          <div class="right-section">
+            <h3>👹 Monstres</h3>
+            <div class="monster-shop">
+              <label class="target-label">Cible:</label>
+              <select id="target-player" class="target-select">
+                <option value="">Choisir un joueur</option>
+              </select>
+              <button class="monster-btn" onclick="sendMonster('basic')" title="Basique - 50💰">
+                <div class="monster-icon">🔴</div>
+              <div class="monster-name">Basique</div>
+              <div class="monster-stats" id="basic-hp">100 HP</div>
+              <div class="cost">💰 50</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('fast')" title="Rapide - 100💰">
+              <div class="monster-icon">🟠</div>
+              <div class="monster-name">Rapide</div>
+              <div class="monster-stats" id="fast-hp">50 HP</div>
+              <div class="cost">💰 100</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('tank')" title="Tank - 150💰">
+              <div class="monster-icon">⬛</div>
+              <div class="monster-name">Tank</div>
+              <div class="monster-stats" id="tank-hp">300 HP</div>
+              <div class="cost">💰 150</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('boss')" title="Boss - 300💰">
+              <div class="monster-icon">👿</div>
+              <div class="monster-name">Boss</div>
+              <div class="monster-stats" id="boss-hp">1000 HP</div>
+              <div class="cost">💰 300</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="game-over-modal" class="modal hidden">
+        <div class="modal-content">
+          <h2>Partie terminée</h2>
+          <p id="game-over-message"></p>
+          <div id="final-stats"></div>
+          <button onclick="returnToLobby()" class="btn-primary" style="margin-top: 20px;">Retour au Lobby</button>
+        </div>
+      </div>
+      <div id="tower-menu" class="tower-menu hidden">
+        <div class="tower-menu-content">
+          <h3 id="tower-menu-title">Tour</h3>
+          
+          <div class="tower-stats-display">
+            <div class="stat-row">
+              <span class="stat-label">Niveau:</span>
+              <span id="tower-menu-level" class="stat-value">1</span>
+            </div>
+            
+            <div class="stat-row upgrade-row" id="tower-menu-range-row" style="display: none;">
+              <div class="stat-col">
+                <span class="stat-label">🎯 Portée</span>
+                <span id="tower-menu-range-current" class="stat-value">300</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-range-next" class="stat-value upgrade">350</span>
+              </div>
+            </div>
+            
+            <div class="stat-row upgrade-row">
+              <div class="stat-col">
+                <span class="stat-label">⚔️ Dégâts</span>
+                <span id="tower-menu-damage-current" class="stat-value">8.5</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-damage-next" class="stat-value upgrade">11.5</span>
+              </div>
+            </div>
+            
+            <div class="stat-row upgrade-row">
+              <div class="stat-col">
+                <span class="stat-label">⚡ Cadence</span>
+                <span id="tower-menu-firerate-current" class="stat-value">1.0x</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-firerate-next" class="stat-value upgrade">1.15x</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tower-menu-actions">
+            <button onclick="upgradeTower()" class="btn-action btn-upgrade">
+              <span>⬆️ Améliorer</span>
+              <span id="tower-upgrade-cost" class="cost-badge">50 💰</span>
+            </button>
+            <button onclick="sellTower()" class="btn-action btn-sell">🗑️ Vendre</button>
+            <button onclick="closeTowerMenu()" class="btn-action btn-close">✖️ Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="toast-container"></div>
+
+    <!-- Modal Recherche -->
+    <div id="research-modal" class="modal hidden research-modal">
+      <div class="research-modal-content">
+        <div class="research-header-modal">
+          <h2>🔬 Arbre des Recherches</h2>
+          <button onclick="toggleResearchPanel()" class="btn-close-modal">✖️</button>
+        </div>
+        
+        <!-- Barre de progression de recherche en cours -->
+        <div id="research-progress-section" class="research-progress-section hidden">
+          <div class="research-progress-info">
+            <span id="research-progress-name" class="research-progress-name">Recherche en cours...</span>
+          </div>
+          <div class="research-progress-bar-main">
+            <div id="research-progress-fill" class="research-progress-fill"></div>
+            <span id="research-progress-text" class="research-progress-text">0/5</span>
+          </div>
+        </div>
+        <div id="research-content" class="research-content">
+          <!-- Rempli dynamiquement par research.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/constants.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/lobby.js"></script>
+  <!-- Modules de jeu -->
+  <script src="js/map.js"></script>
+  <script src="js/towers.js"></script>
+  <script src="js/monsters.js"></script>
+  <script src="js/waves.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/research.js"></script>
+  <script src="js/socket-events.js"></script>
+  <script src="js/game-cleanup.js"></script>
+  <!-- Cœur du jeu -->
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

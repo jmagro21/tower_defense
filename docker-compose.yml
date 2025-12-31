@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Application Node.js
+  app:
+    build: .
+    container_name: tower-defense-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongodbjeu:27017/tower-defense
+      - JWT_SECRET=votre_secret_jwt_tres_securise_changez_moi
+      - NODE_ENV=development
+    depends_on:
+      - mongodbjeu
+    volumes:
+      - ./client:/app/client
+      - ./server:/app/server
+      - ./shared:/app/shared
+    restart: unless-stopped
+    networks:
+      - tower-defense-network
+
+  # Base de données MongoDB
+  mongodbjeu:
+    image: mongo:7.0
+    container_name: tower-defense-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - tower-defense-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  tower-defense-network:
+    driver: bridge
