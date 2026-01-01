@@ -31,20 +31,46 @@ module.exports = (io) => {
     console.log(`Nouveau client connecté: ${socket.id}`);
     let currentUser = null;
 
-    // Authentification
-    socket.on(SOCKET_EVENTS.LOGIN, ({ token }) => {
-      const decoded = verifyToken(token);
+    // Authentification - récupérer le token du cookie via handshake
+    socket.on(SOCKET_EVENTS.LOGIN, ({ token } = {}) => {
+      console.log(`🔐 Tentative d'authentification socket (${socket.id})`);
+      
+      // Essayer d'abord le token du paramètre (backward compatibility)
+      // Sinon récupérer depuis les cookies du handshake
+      let tokenToVerify = token;
+      if (!tokenToVerify && socket.handshake.headers.cookie) {
+        const cookies = socket.handshake.headers.cookie.split('; ').reduce((acc, cookie) => {
+          const [key, value] = cookie.split('=');
+          acc[key] = value;
+          return acc;
+        }, {});
+        tokenToVerify = cookies.token;
+      }
+      
+      if (!tokenToVerify) {
+        console.error(`✗ Aucun token trouvé pour ${socket.id}`);
+        socket.emit(SOCKET_EVENTS.AUTH_ERROR, { message: 'Token manquant' });
+        return;
+      }
+      
+      const decoded = verifyToken(tokenToVerify);
       if (decoded) {
         currentUser = decoded;
+        console.log(`✓ Socket authentifiée: ${decoded.username}`);
         socket.emit(SOCKET_EVENTS.AUTH_SUCCESS, { username: decoded.username });
       } else {
+        console.error(`✗ Token socket invalide (${socket.id})`);
         socket.emit(SOCKET_EVENTS.AUTH_ERROR, { message: 'Token invalide' });
       }
     });
 
     // Créer un salon
     socket.on(SOCKET_EVENTS.CREATE_ROOM, () => {
-      if (!currentUser) return;
+      if (!currentUser) {
+        console.error(`❌ Tentative de création de salon sans authentification (socket: ${socket.id})`);
+        socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: 'Veuillez vous authentifier d\'abord' });
+        return;
+      }
 
       const code = generateRoomCode();
       const room = new GameRoom(code, currentUser.username);

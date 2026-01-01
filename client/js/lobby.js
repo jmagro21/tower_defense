@@ -5,18 +5,21 @@ let isHost = false;
 let roomPlayers = [];
 
 function initSocket() {
-  if (!token) {
-    console.error('Token manquant, impossible de se connecter');
-    showLobbyError('Erreur d\'authentification');
-    return;
-  }
-
-  // Socket.io détecte automatiquement l'URL du serveur (compatible avec Docker et localhost)
-  socket = io();
+  // Le token est maintenant dans le cookie HTTP-only
+  // Socket.io l'envoie automatiquement avec credentials: true
+  
+  socket = io(undefined, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5
+  });
 
   socket.on('connect', () => {
     console.log('Connecté au serveur');
-    socket.emit(CONSTANTS.SOCKET_EVENTS.LOGIN, { token });
+    // Pas besoin d'envoyer le token, il est dans le cookie
+    socket.emit(CONSTANTS.SOCKET_EVENTS.LOGIN, {});
   });
 
   socket.on('connect_error', (error) => {

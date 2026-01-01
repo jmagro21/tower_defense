@@ -1,5 +1,5 @@
 // Gestion de l'authentification
-let token = localStorage.getItem('token');
+let token = null;  // Plus besoin de localStorage, le cookie est HTTP-only
 let currentUser = null;
 
 async function register() {
@@ -15,15 +15,14 @@ async function register() {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'  // Envoyer et recevoir les cookies
     });
 
     const data = await response.json();
 
     if (data.success) {
-      token = data.token;
       currentUser = data.user;
-      localStorage.setItem('token', token);
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       showScreen('lobby-screen');
       updateUserDisplay();
@@ -49,15 +48,14 @@ async function login() {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'  // Envoyer et recevoir les cookies
     });
 
     const data = await response.json();
 
     if (data.success) {
-      token = data.token;
       currentUser = data.user;
-      localStorage.setItem('token', token);
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       showScreen('lobby-screen');
       updateUserDisplay();
@@ -71,11 +69,9 @@ async function login() {
 }
 
 function logout() {
-  localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('currentRoom');
   localStorage.removeItem('gameState');
-  token = null;
   currentUser = null;
   if (socket) {
     socket.disconnect();

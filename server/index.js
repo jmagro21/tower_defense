@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -28,11 +29,20 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://tower.games.heimdall-security.com'
+    'https://tower.games.heimdall-security.com',
+    'https://51.91.59.45'  // Whitelist IP de prod
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Handler OPTIONS explicite pour les preflight requests (compatible Express 5+)
+app.use(cors());
+
 app.use(express.json());
+app.use(cookieParser());
+
 app.use(express.static(path.join(__dirname, '../client')));
 
 // Routes

@@ -26,9 +26,17 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Envoyer le token en cookie HTTP-only
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: true,  // Toujours HTTPS en prod
+      sameSite: 'none',  // Nécessaire pour cross-origin avec proxies
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 jours
+    });
+
     res.json({
       success: true,
-      token,
       user: {
         id: user._id,
         username: user.username,
@@ -64,9 +72,17 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Envoyer le token en cookie HTTP-only
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: true,  // Toujours HTTPS en prod
+      sameSite: 'none',  // Nécessaire pour cross-origin avec proxies
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 jours
+    });
+
     res.json({
       success: true,
-      token,
       user: {
         id: user._id,
         username: user.username,
@@ -81,7 +97,8 @@ router.post('/login', async (req, res) => {
 // Vérifier le token
 router.get('/verify', async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    // Récupérer le token du cookie
+    const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ error: 'Token manquant' });
     }
