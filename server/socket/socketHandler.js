@@ -33,18 +33,25 @@ module.exports = (io) => {
 
     // Authentification
     socket.on(SOCKET_EVENTS.LOGIN, ({ token }) => {
+      console.log(`🔐 Tentative d'authentification socket (${socket.id})`);
       const decoded = verifyToken(token);
       if (decoded) {
         currentUser = decoded;
+        console.log(`✓ Socket authentifiée: ${decoded.username}`);
         socket.emit(SOCKET_EVENTS.AUTH_SUCCESS, { username: decoded.username });
       } else {
+        console.error(`✗ Token socket invalide (${socket.id})`);
         socket.emit(SOCKET_EVENTS.AUTH_ERROR, { message: 'Token invalide' });
       }
     });
 
     // Créer un salon
     socket.on(SOCKET_EVENTS.CREATE_ROOM, () => {
-      if (!currentUser) return;
+      if (!currentUser) {
+        console.error(`❌ Tentative de création de salon sans authentification (socket: ${socket.id})`);
+        socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: 'Veuillez vous authentifier d\'abord' });
+        return;
+      }
 
       const code = generateRoomCode();
       const room = new GameRoom(code, currentUser.username);
