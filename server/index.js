@@ -30,8 +30,14 @@ app.use(cors({
     'http://localhost:5173',
     'https://tower.games.heimdall-security.com'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Handler OPTIONS explicite pour les preflight requests
+app.options('*', cors());
+
 app.use(express.json());
 
 // Content Security Policy pour permettre les CDN
