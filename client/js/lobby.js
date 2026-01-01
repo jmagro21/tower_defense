@@ -11,8 +11,14 @@ function initSocket() {
     return;
   }
 
-  // Socket.io détecte automatiquement l'URL du serveur (compatible avec Docker et localhost)
-  socket = io();
+  // Utiliser le domaine actuel (fonctionne en local ET en prod)
+  socket = io(undefined, {
+    transports: ['websocket', 'polling'],  // Essayer WebSocket en premier
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5
+  });
 
   socket.on('connect', () => {
     console.log('Connecté au serveur');

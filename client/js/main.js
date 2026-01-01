@@ -1,5 +1,8 @@
 // Initialisation de l'application
 window.addEventListener('DOMContentLoaded', () => {
+  // Récupérer le token depuis localStorage (au cas où il a changé depuis le chargement du script)
+  token = localStorage.getItem('token');
+  
   // Vérifier si l'utilisateur est déjà connecté
   if (token) {
     const savedUser = localStorage.getItem('currentUser');
