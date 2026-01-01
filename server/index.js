@@ -29,7 +29,8 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://tower.games.heimdall-security.com'
+    'https://tower.games.heimdall-security.com',
+    'https://51.91.59.45'  // Whitelist IP de prod
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
