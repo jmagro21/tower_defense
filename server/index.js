@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -39,6 +40,7 @@ app.use(cors({
 app.options('*', cors());
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Content Security Policy pour permettre les CDN
 app.use((req, res, next) => {
