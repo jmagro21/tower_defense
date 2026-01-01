@@ -4,8 +4,9 @@
   "description": "Jeu Tower Defense multijoueur en temps réel",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
+    "start": "node scripts/copy-libs.js && node server/index.js",
+    "dev": "node scripts/copy-libs.js && nodemon server/index.js",
+    "build:libs": "node scripts/copy-libs.js",
     "client": "cd client && live-server --port=8080",
     "server": "nodemon server/index.js"
   },
@@ -20,7 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "phaser": "^3.70.0",
+    "socket.io-client": "^4.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
