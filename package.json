@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
+    "build:libs": "node scripts/copy-libs.js",
     "client": "cd client && live-server --port=8080",
     "server": "nodemon server/index.js"
   },
@@ -21,7 +22,9 @@
     "dotenv": "^17.2.3",
     "cors": "^2.8.5",
     "cookie-parser": "^1.4.6",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "phaser": "^3.70.0",
+    "socket.io-client": "^4.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

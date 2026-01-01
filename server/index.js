@@ -43,15 +43,6 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Content Security Policy pour permettre les CDN
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; connect-src 'self' https://tower.games.heimdall-security.com wss://tower.games.heimdall-security.com ws://localhost:* http://localhost:*"
-  );
-  next();
-});
-
 app.use(express.static(path.join(__dirname, '../client')));
 
 // Routes
