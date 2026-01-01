@@ -15,7 +15,8 @@ async function register() {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'  // Envoyer et recevoir les cookies
     });
 
     const data = await response.json();
@@ -47,7 +48,8 @@ async function login() {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      credentials: 'include'  // Envoyer et recevoir les cookies
     });
 
     const data = await response.json();
