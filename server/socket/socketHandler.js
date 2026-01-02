@@ -245,7 +245,7 @@ module.exports = (io) => {
     });
 
     // Améliorer une tour
-    socket.on('UPGRADE_TOWER', ({ towerId, x, y }) => {
+    socket.on('UPGRADE_TOWER', ({ towerId, x, y, upgradeCost: clientUpgradeCost }) => {
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -258,11 +258,18 @@ module.exports = (io) => {
 
       const towerConfig = TOWER_TYPES[tower.id.toUpperCase()];
       
-      // Calculer le coût d'amélioration
+      // Calculer le coût d'amélioration de base (sans bonus de recherche)
       // Pour toutes les tours: prix x2 tous les 5 niveaux
       const currentLevel = tower.level || 1;
       const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
-      const upgradeCost = towerConfig.upgradeCost * multiplier;
+      const baseUpgradeCost = towerConfig.upgradeCost * multiplier;
+      
+      // Utiliser le coût envoyé par le client (avec bonus de recherche)
+      // Mais vérifier qu'il n'est pas inférieur à 50% du coût de base (anti-triche)
+      const minAllowedCost = Math.floor(baseUpgradeCost * 0.5);
+      const upgradeCost = (clientUpgradeCost && clientUpgradeCost >= minAllowedCost) 
+        ? clientUpgradeCost 
+        : baseUpgradeCost;
 
       if (player.money < upgradeCost) return;
 

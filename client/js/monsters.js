@@ -116,6 +116,39 @@ function spawnMonster(monsterData) {
       yoyo: true,
       repeat: -1
     });
+  } else if (monsterData.id === 'saboteur') {
+    // Saboteur - forme de petit robot/gremlins avec clé à molette
+    const body = gameScene.add.circle(0, 0, 14, 0x2c3e50);
+    const visor = gameScene.add.rectangle(0, -3, 18, 6, 0xe74c3c);
+    const eye1 = gameScene.add.circle(-4, -3, 2, 0xf1c40f);
+    const eye2 = gameScene.add.circle(4, -3, 2, 0xf1c40f);
+    // Clé à molette
+    const wrench1 = gameScene.add.rectangle(10, 5, 4, 12, 0x7f8c8d);
+    const wrench2 = gameScene.add.circle(10, 11, 4, 0x7f8c8d);
+    // Boulons décoratifs
+    const bolt1 = gameScene.add.circle(-8, 8, 2, 0x95a5a6);
+    const bolt2 = gameScene.add.circle(8, -10, 2, 0x95a5a6);
+    const bolt3 = gameScene.add.circle(-10, -8, 2, 0x95a5a6);
+    // Aura de sabotage
+    const aura = gameScene.add.circle(0, 0, 20, 0x9b59b6, 0.15);
+    monsterGraphics = [aura, body, visor, eye1, eye2, wrench1, wrench2, bolt1, bolt2, bolt3];
+    
+    // Animation de la clé qui tourne
+    gameScene.tweens.add({
+      targets: [wrench1, wrench2],
+      angle: 360,
+      duration: 2000,
+      repeat: -1
+    });
+    
+    // Clignotement des yeux
+    gameScene.tweens.add({
+      targets: [eye1, eye2],
+      alpha: 0.3,
+      duration: 300,
+      yoyo: true,
+      repeat: -1
+    });
   } else if (monsterData.id === 'bigboss') {
     // TITAN - Big Boss géant et terrifiant
     // Corps principal massif
@@ -319,6 +352,24 @@ function spawnSplitMonster(monsterData) {
 // Spawn 5 minions aléatoires devant le Big Boss
 function spawnBigBossMinion(bigBoss) {
   if (!gameScene || !bigBoss.sprite || !bigBoss.sprite.active) return;
+  
+  // Limite de 300 unités sur le board - Titan ne peut plus spawn
+  const MAX_UNITS_ON_BOARD = 300;
+  if (monsters.length >= MAX_UNITS_ON_BOARD) {
+    // Effet visuel pour montrer que le spawn est bloqué
+    if (bigBoss.sprite) {
+      const blockedEffect = gameScene.add.circle(bigBoss.sprite.x, bigBoss.sprite.y, 25, 0xff0000, 0.4);
+      blockedEffect.setDepth(50);
+      gameScene.tweens.add({
+        targets: blockedEffect,
+        alpha: 0,
+        scale: 1.5,
+        duration: 500,
+        onComplete: () => blockedEffect.destroy()
+      });
+    }
+    return; // Ne pas spawn si limite atteinte
+  }
   
   // Liste des types de monstres que le Titan peut spawn (tous sauf bigboss)
   const monsterTypes = ['basic', 'fast', 'tank', 'splitter', 'buffer', 'stunner', 'invisible', 'boss'];
@@ -580,8 +631,36 @@ function shootAtMonster(tower, monster) {
   
   // Si c'est un stunner et qu'il n'a pas encore stun le max de tours
   if (monster.id === 'stunner' && monster.stunCount < CONSTANTS.MONSTER_TYPES.STUNNER.maxStuns) {
-    stunTower(tower, CONSTANTS.MONSTER_TYPES.STUNNER.stunDuration);
-    monster.stunCount++;
+    // Les tours basiques sont immunisées contre la paralysie du Stunner
+    if (tower.id === 'basic') {
+      // Ça compte quand même comme un stun utilisé !
+      monster.stunCount++;
+      
+      // Effet visuel d'immunité
+      if (gameScene) {
+        const immuneText = gameScene.add.text(tower.x, tower.y - 35, '🛡️ Immunisé !', {
+          fontSize: '12px',
+          fill: '#27ae60',
+          fontStyle: 'bold',
+          stroke: '#000',
+          strokeThickness: 2
+        });
+        immuneText.setOrigin(0.5);
+        immuneText.setDepth(200);
+        
+        gameScene.tweens.add({
+          targets: immuneText,
+          y: tower.y - 60,
+          alpha: 0,
+          duration: 1000,
+          onComplete: () => immuneText.destroy()
+        });
+      }
+    } else {
+      // Tours non-basiques : se font paralyser normalement
+      stunTower(tower, CONSTANTS.MONSTER_TYPES.STUNNER.stunDuration);
+      monster.stunCount++;
+    }
   }
   
   // Big Boss paralyse les 5 premières tours qui lui tirent dessus
@@ -923,6 +1002,11 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
     }
     
     showToast('💀 TITAN DÉTRUIT - 5 BOSS ÉMERGENT !', 'danger');
+  }
+  
+  // Vérifier si c'est un Saboteur - pénalise la tour qui l'a tué
+  if (monster.isSaboteur && killerTower) {
+    penalizeTowerForSaboteurKill(killerTower);
   }
   
   // Vérifier si le monstre peut se diviser

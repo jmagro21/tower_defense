@@ -90,6 +90,13 @@ function updateGameTime() {
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);
+    
+    // À partir de la vague 20, spawn massif
+    if (monsterLevel >= 20) {
+      // Multiplier le budget de spawn par 3 à partir de la vague 20
+      maxSpawnUnits = Math.floor(maxSpawnUnits * 1.5);
+      showNotification(`⚠️ VAGUE ${monsterLevel} - INVASION MASSIVE !`);
+    }
   }
 }
 

@@ -2,6 +2,20 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Fix mobile touch */
+html, body {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button, select, input, a, .tower-btn, .monster-btn {
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 body {
@@ -622,6 +636,29 @@ body {
   transform: scale(1.05);
 }
 
+/* Bouton toggle portées */
+.btn-range-toggle {
+  background: #3498db;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.btn-range-toggle:hover {
+  background: #2980b9;
+  transform: scale(1.05);
+}
+
+.btn-range-toggle.active {
+  background: #27ae60;
+  box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
 .ui-top {
   display: flex;
   gap: 15px;
@@ -660,6 +697,13 @@ body {
   border-radius: 10px;
   border: 3px solid #3a6b1f;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+#game-container canvas {
+  display: block;
+  touch-action: manipulation;
 }
 
 /* Panneaux latéraux */
@@ -672,6 +716,8 @@ body {
   flex-direction: column;
   overflow-y: auto;
   color: white;
+  position: relative;
+  z-index: 10;
 }
 
 .game-panel h3 {
@@ -822,6 +868,37 @@ body {
   border-color: #f1c40f;
 }
 
+/* Style spécial pour le bouton Saboteur */
+.monster-btn.saboteur-btn {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #1a252f 100%);
+  border: 2px solid #e74c3c;
+  animation: saboteur-pulse 1.5s infinite;
+}
+
+.monster-btn.saboteur-btn:hover {
+  box-shadow: 0 4px 20px rgba(231, 76, 60, 0.6);
+  border-color: #c0392b;
+}
+
+.monster-btn.saboteur-btn .monster-name {
+  color: #e74c3c;
+  text-shadow: 0 0 5px #c0392b;
+}
+
+.monster-btn.saboteur-btn .cost {
+  color: #e74c3c;
+  font-size: 11px;
+}
+
+@keyframes saboteur-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.8), 0 0 25px rgba(44, 62, 80, 0.3);
+  }
+}
+
 .monster-btn.bigboss-btn .monster-name {
   color: #f1c40f;
   text-shadow: 0 0 5px #f39c12;
@@ -850,18 +927,21 @@ body {
 .tower-icon,
 .monster-icon {
   font-size: 24px;
+  pointer-events: none;
 }
 
 .tower-name,
 .monster-name {
   font-size: 11px;
   font-weight: bold;
+  pointer-events: none;
 }
 
 .tower-stats,
 .monster-stats {
   font-size: 9px;
   color: #ddd;
+  pointer-events: none;
 }
 
 .cost {
@@ -869,6 +949,7 @@ body {
   color: #ffd700;
   font-weight: bold;
   margin-top: 2px;
+  pointer-events: none;
 }
 
 /* Sélecteur de cible */
@@ -1611,4 +1692,694 @@ body {
   font-weight: bold;
   text-align: center;
   line-height: 1.2;
+}
+
+/* ===========================================
+   RESPONSIVE MOBILE - Téléphones
+   =========================================== */
+
+/* Tablettes et petits écrans */
+@media screen and (max-width: 1024px) {
+  body {
+    overflow-y: auto;
+  }
+  
+  .game-wrapper {
+    flex-direction: column;
+    padding: 5px;
+    gap: 5px;
+    overflow-y: auto;
+  }
+  
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    flex-direction: column;
+    padding: 8px;
+  }
+  
+  .left-panel {
+    order: 2;
+  }
+  
+  .right-panel {
+    order: 3;
+  }
+  
+  .game-center {
+    order: 1;
+  }
+  
+  .tower-shop,
+  .monster-shop {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    width: 100%;
+  }
+  
+  .tower-btn,
+  .monster-btn {
+    padding: 6px;
+    min-width: auto;
+    max-width: none;
+  }
+  
+  .tower-icon,
+  .monster-icon {
+    font-size: 18px;
+  }
+  
+  .stat-item {
+    min-width: 80px;
+    padding: 5px 8px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
+  }
+}
+
+/* Téléphones - Portrait */
+@media screen and (max-width: 768px) {
+  body {
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  
+  .screen {
+    padding: 5px;
+    overflow-y: auto;
+  }
+  
+  #game-screen {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: auto;
+    height: auto;
+  }
+  
+  /* Auth */
+  .auth-container {
+    padding: 20px;
+    border-radius: 15px;
+    margin: 10px;
+  }
+  
+  .auth-container h1 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+  }
+  
+  /* Lobby */
+  .lobby-container {
+    padding: 15px;
+    margin: 10px;
+    max-width: 100%;
+  }
+  
+  .lobby-container h1 {
+    font-size: 1.3em;
+  }
+  
+  .room-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .room-actions input,
+  .room-actions button {
+    width: 100%;
+  }
+  
+  /* Waiting room */
+  .waiting-room-container {
+    padding: 15px;
+    margin: 10px;
+  }
+  
+  /* Game screen */
+  #game-screen {
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .game-wrapper {
+    flex-direction: column;
+    padding: 5px;
+    gap: 5px;
+    height: auto;
+  }
+  
+  .game-center {
+    order: 1;
+    min-height: 300px;
+  }
+  
+  #game-container {
+    min-height: 280px;
+    height: 40vh;
+  }
+  
+  /* Panneaux sur mobile */
+  .left-panel {
+    order: 2;
+    width: 100%;
+    padding: 8px;
+    flex-direction: column;
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  
+  .right-panel {
+    order: 3;
+    width: 100%;
+    padding: 8px;
+    flex-direction: column;
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  
+  .game-panel h3 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    width: 100%;
+    text-align: center;
+  }
+  
+  /* S'assurer que le game-container ne bloque pas les clics en dehors */
+  #game-container {
+    min-height: 280px;
+    height: 40vh;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .game-wrapper {
+    flex-direction: column;
+    padding: 5px;
+    gap: 5px;
+    height: auto;
+    position: relative;
+  }
+  
+  /* Tours en grille - SOUS le titre */
+  .tower-shop {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    width: 100%;
+    margin-top: 5px;
+    pointer-events: auto;
+  }
+  
+  .tower-btn {
+    padding: 5px;
+    min-width: auto;
+    max-width: none;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  
+  .tower-icon {
+    font-size: 20px;
+    pointer-events: none;
+  }
+  
+  .tower-name {
+    font-size: 8px;
+    pointer-events: none;
+  }
+  
+  .tower-stats {
+    display: none;
+  }
+  
+  .cost {
+    font-size: 8px;
+    pointer-events: none;
+  }
+  
+  /* Monstres en grille */
+  .monster-shop {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    pointer-events: auto;
+  }
+  
+  .monster-btn {
+    padding: 5px;
+    min-width: auto;
+    max-width: none;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  
+  .monster-icon {
+    font-size: 18px;
+    pointer-events: none;
+  }
+  
+  .monster-name {
+    font-size: 8px;
+    pointer-events: none;
+  }
+  
+  .monster-stats {
+    display: none;
+  }
+  
+  /* Big Boss plus visible */
+  .monster-btn.bigboss-btn {
+    grid-column: span 2;
+  }
+  
+  /* Stats en haut */
+  .top-panel {
+    padding: 8px;
+    gap: 5px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  
+  .stat-item {
+    min-width: 60px;
+    padding: 4px 6px;
+    flex: 1;
+  }
+  
+  .stat-icon {
+    font-size: 14px;
+  }
+  
+  .stat-label {
+    font-size: 8px;
+  }
+  
+  .stat-value {
+    font-size: 12px;
+  }
+  
+  .btn-quit {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  
+  /* Target select */
+  .target-select {
+    padding: 6px;
+    font-size: 12px;
+    pointer-events: auto;
+    position: relative;
+    z-index: 101;
+  }
+  
+  .target-label {
+    font-size: 10px;
+  }
+  
+  /* Bouton quit */
+  .btn-quit {
+    pointer-events: auto;
+    position: relative;
+    z-index: 101;
+  }
+  
+  /* Bouton recherche */
+  .btn-research-toggle {
+    pointer-events: auto;
+    position: relative;
+    z-index: 101;
+  }
+  
+  /* Leaderboard compact */
+  .leaderboard-list {
+    font-size: 11px;
+  }
+  
+  .leaderboard-item {
+    padding: 4px 6px;
+  }
+  
+  /* Tower menu */
+  .tower-menu {
+    width: 90vw;
+    max-width: 350px;
+    padding: 15px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-height: 85vh;
+    overflow-y: auto;
+    z-index: 2000;
+    pointer-events: auto;
+  }
+  
+  .tower-menu h3 {
+    font-size: 16px;
+  }
+  
+  .tower-menu-stats {
+    font-size: 11px;
+  }
+  
+  .upgrade-btn,
+  .move-btn,
+  .sell-btn {
+    padding: 8px 12px;
+    font-size: 11px;
+    pointer-events: auto;
+  }
+  
+  /* Abilities compact */
+  .tower-abilities-section {
+    padding: 10px;
+  }
+  
+  .ability-btn {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .ability-icon {
+    font-size: 18px;
+    min-width: 25px;
+  }
+  
+  .ability-name {
+    font-size: 12px;
+  }
+  
+  .ability-desc {
+    font-size: 9px;
+  }
+  
+  /* Targeting compact */
+  .tower-targeting-section {
+    padding: 10px;
+  }
+  
+  .targeting-modes {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  
+  .targeting-btn {
+    padding: 6px 4px;
+  }
+  
+  .targeting-icon {
+    font-size: 16px;
+  }
+  
+  .targeting-name {
+    font-size: 8px;
+  }
+  
+  /* Music controls in game */
+  .music-controls-ingame {
+    top: 5px;
+    right: 5px;
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  
+  .music-controls-ingame input[type="range"] {
+    width: 60px;
+  }
+  
+  .btn-music-mini {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  
+  /* Modals */
+  .modal-content {
+    width: 95%;
+    max-width: 350px;
+    padding: 20px;
+    margin: 10px;
+  }
+  
+  /* Research panel */
+  .research-panel {
+    width: 95vw;
+    max-width: 400px;
+    max-height: 80vh;
+    padding: 15px;
+  }
+  
+  .research-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .research-tab {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px;
+    font-size: 11px;
+  }
+  
+  .research-item {
+    padding: 10px;
+    gap: 8px;
+  }
+  
+  .research-item h4 {
+    font-size: 13px;
+  }
+  
+  .research-item p {
+    font-size: 10px;
+  }
+  
+  /* Toast notifications */
+  .toast-container {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .toast {
+    font-size: 12px;
+    padding: 10px 15px;
+  }
+}
+
+/* Très petits téléphones */
+@media screen and (max-width: 480px) {
+  .auth-container h1 {
+    font-size: 1.2em;
+  }
+  
+  .auth-form input,
+  .auth-form button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  #game-container {
+    min-height: 250px;
+    height: 35vh;
+  }
+  
+  .tower-shop {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  
+  .monster-shop {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .tower-icon,
+  .monster-icon {
+    font-size: 16px;
+  }
+  
+  .tower-name,
+  .monster-name {
+    font-size: 7px;
+  }
+  
+  .cost {
+    font-size: 7px;
+  }
+  
+  .stat-item {
+    min-width: 50px;
+    padding: 3px 5px;
+  }
+  
+  .stat-icon {
+    font-size: 12px;
+  }
+  
+  .stat-label {
+    font-size: 7px;
+  }
+  
+  .stat-value {
+    font-size: 10px;
+  }
+  
+  .tower-menu {
+    width: 95vw;
+    padding: 12px;
+  }
+  
+  .targeting-modes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mode paysage mobile */
+@media screen and (max-width: 896px) and (orientation: landscape) {
+  .game-wrapper {
+    flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .game-center {
+    order: 2;
+    flex: 1;
+  }
+  
+  .left-panel {
+    order: 1;
+    width: 120px;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .right-panel {
+    order: 3;
+    width: 150px;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  #game-container {
+    height: 100%;
+    min-height: auto;
+  }
+  
+  .tower-shop,
+  .monster-shop {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .tower-btn,
+  .monster-btn {
+    min-width: auto;
+    max-width: none;
+    padding: 4px;
+  }
+  
+  .tower-icon,
+  .monster-icon {
+    font-size: 16px;
+  }
+  
+  .tower-name,
+  .monster-name {
+    font-size: 8px;
+  }
+  
+  .stat-item {
+    padding: 3px 5px;
+  }
+  
+  .stat-value {
+    font-size: 11px;
+  }
+  
+  .top-panel {
+    padding: 5px;
+  }
+}
+
+/* Empêcher le zoom sur les inputs sur iOS */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch-friendly - zones de tap plus grandes */
+@media (hover: none) and (pointer: coarse) {
+  .tower-btn,
+  .monster-btn {
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .upgrade-btn,
+  .move-btn,
+  .sell-btn,
+  .ability-btn,
+  .targeting-btn {
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+  }
+  
+  .btn-quit,
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+  }
+  
+  /* Fix pour les clics sur mobile */
+  .game-panel {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  
+  .tower-shop,
+  .monster-shop {
+    touch-action: pan-y;
+  }
+  
+  /* S'assurer que les boutons sont cliquables */
+  button, 
+  .tower-btn, 
+  .monster-btn,
+  select,
+  input,
+  a {
+    touch-action: manipulation;
+  }
+}
+
+/* Fix global pour les interactions tactiles */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.tower-btn,
+.monster-btn,
+select,
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer;
+  touch-action: manipulation;
 }

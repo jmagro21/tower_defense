@@ -6,8 +6,15 @@ let towerRangePreview = null; // Cercle de preview pour la portée
 let movingTower = null; // Tour en cours de déplacement
 const MOVE_TOWER_COST = 25; // Coût pour déplacer une tour
 let towerClickHandled = false; // Drapeau pour éviter la fermeture immédiate du menu
+let showRangeCircles = false; // Afficher les cercles de portée de toutes les tours
 
-function selectTower(towerType) {
+function selectTower(towerType, evt) {
+  // Empêcher la propagation sur mobile
+  if (evt) {
+    evt.preventDefault();
+    evt.stopPropagation();
+  }
+  
   // Si la même tour est déjà sélectionnée, la désélectionner
   if (selectedTowerType === towerType) {
     deselectTower();
@@ -18,7 +25,12 @@ function selectTower(towerType) {
   document.querySelectorAll('.tower-btn').forEach(btn => {
     btn.classList.remove('selected');
   });
-  event.target.closest('.tower-btn').classList.add('selected');
+  
+  // Trouver le bouton cliqué de manière plus fiable
+  const clickedBtn = evt ? evt.currentTarget : document.querySelector(`.tower-btn[onclick*="'${towerType}'"]`);
+  if (clickedBtn) {
+    clickedBtn.classList.add('selected');
+  }
   
   // Nettoyer l'ancien cercle de preview s'il existe
   if (towerRangePreview) {
@@ -654,10 +666,112 @@ function upgradeTower() {
   socket.emit('UPGRADE_TOWER', {
     towerId: selectedTower.id,
     x: selectedTower.x,
-    y: selectedTower.y
+    y: selectedTower.y,
+    upgradeCost: upgradeCost  // Envoyer le coût avec réduction de recherche
   });
   
   // Ne pas fermer le menu, il sera mis à jour par l'événement TOWER_UPGRADED
+}
+
+// Pénaliser une tour qui a tué un Saboteur
+function penalizeTowerForSaboteurKill(killerTower) {
+  if (!killerTower) return;
+  
+  const currentLevel = killerTower.level || 1;
+  
+  if (currentLevel > 1) {
+    // Réduire le niveau de 1
+    killerTower.level = currentLevel - 1;
+    
+    // Mettre à jour les stats de la tour
+    const towerConfig = CONSTANTS.TOWER_TYPES[killerTower.id.toUpperCase()];
+    if (towerConfig) {
+      const newLevel = killerTower.level;
+      const levelBonus = 1 + (newLevel - 1) * 0.15; // 15% par niveau
+      
+      killerTower.damage = Math.floor(towerConfig.damage * levelBonus);
+      killerTower.range = Math.floor(towerConfig.range * (1 + (newLevel - 1) * 0.05)); // 5% portée par niveau
+      
+      // Mettre à jour visuellement
+      if (killerTower.levelText) {
+        killerTower.levelText.setText(`Nv.${newLevel}`);
+      }
+      if (killerTower.rangeCircle) {
+        killerTower.rangeCircle.setRadius(killerTower.range);
+      }
+    }
+    
+    showToast(`⚠️ Saboteur ! Tour rétrogradée au niveau ${killerTower.level} !`, 'warning');
+  } else {
+    // Niveau 1 : perd tous les bonus mais reste niveau 1
+    const towerConfig = CONSTANTS.TOWER_TYPES[killerTower.id.toUpperCase()];
+    if (towerConfig) {
+      // Remettre les stats de base sans aucun bonus
+      killerTower.damage = towerConfig.damage;
+      killerTower.range = towerConfig.range;
+      killerTower.fireRate = towerConfig.fireRate;
+      
+      // Mettre à jour visuellement
+      if (killerTower.rangeCircle) {
+        killerTower.rangeCircle.setRadius(killerTower.range);
+      }
+    }
+    
+    showToast(`💥 Saboteur ! Tour affaiblie - Bonus perdus !`, 'error');
+  }
+  
+  // Effet visuel de sabotage (violet/noir)
+  if (gameScene && killerTower.sprite) {
+    const sabotageEffect = gameScene.add.circle(killerTower.x, killerTower.y, 40, 0x9b59b6, 0.6);
+    sabotageEffect.setDepth(100);
+    gameScene.tweens.add({
+      targets: sabotageEffect,
+      alpha: 0,
+      scale: 2,
+      duration: 800,
+      onComplete: () => sabotageEffect.destroy()
+    });
+    
+    // Icône de sabotage
+    const sabotageIcon = gameScene.add.text(killerTower.x, killerTower.y - 30, '🔧💀', {
+      fontSize: '24px'
+    });
+    sabotageIcon.setOrigin(0.5);
+    sabotageIcon.setDepth(101);
+    gameScene.tweens.add({
+      targets: sabotageIcon,
+      y: killerTower.y - 60,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => sabotageIcon.destroy()
+    });
+  }
+}
+
+// Toggle l'affichage des cercles de portée de toutes les tours
+function toggleRangeCircles() {
+  showRangeCircles = !showRangeCircles;
+  
+  // Mettre à jour le bouton
+  const rangeButton = document.getElementById('range-button');
+  if (rangeButton) {
+    if (showRangeCircles) {
+      rangeButton.classList.add('active');
+      rangeButton.textContent = '🎯 Portées ON';
+    } else {
+      rangeButton.classList.remove('active');
+      rangeButton.textContent = '🎯 Portées';
+    }
+  }
+  
+  // Afficher ou masquer les cercles de toutes les tours
+  towers.forEach(tower => {
+    if (tower.rangeCircle) {
+      tower.rangeCircle.setVisible(showRangeCircles);
+    }
+  });
+  
+  showToast(showRangeCircles ? '🎯 Portées affichées' : '🎯 Portées masquées', 'info');
 }
 
 function sellTower() {

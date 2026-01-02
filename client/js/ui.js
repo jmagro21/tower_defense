@@ -72,6 +72,7 @@ function updateMonsterHPDisplay() {
   const bufferHP = Math.floor(CONSTANTS.MONSTER_TYPES.BUFFER.health * monsterHealthMultiplier);
   const stunnerHP = Math.floor(CONSTANTS.MONSTER_TYPES.STUNNER.health * monsterHealthMultiplier);
   const invisibleHP = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.health * monsterHealthMultiplier);
+  const saboteurHP = Math.floor(CONSTANTS.MONSTER_TYPES.SABOTEUR.health * monsterHealthMultiplier);
   const bossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.health * monsterHealthMultiplier);
   const bigbossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.health * monsterHealthMultiplier);
   
@@ -82,6 +83,7 @@ function updateMonsterHPDisplay() {
   const bufferElement = document.getElementById('buffer-hp');
   const stunnerElement = document.getElementById('stunner-hp');
   const invisibleElement = document.getElementById('invisible-hp');
+  const saboteurElement = document.getElementById('saboteur-hp');
   const bossElement = document.getElementById('boss-hp');
   const bigbossElement = document.getElementById('bigboss-hp');
   
@@ -92,6 +94,7 @@ function updateMonsterHPDisplay() {
   if (bufferElement) bufferElement.textContent = `${bufferHP} HP`;
   if (stunnerElement) stunnerElement.textContent = `${stunnerHP} HP`;
   if (invisibleElement) invisibleElement.textContent = `${invisibleHP} HP`;
+  if (saboteurElement) saboteurElement.textContent = `${saboteurHP} HP`;
   if (bossElement) bossElement.textContent = `${bossHP} HP`;
   if (bigbossElement) bigbossElement.textContent = `${bigbossHP} HP`;
 }
@@ -109,6 +112,7 @@ function updateMonsterCostDisplay() {
   const bufferCost = Math.floor(CONSTANTS.MONSTER_TYPES.BUFFER.cost * (1 - costReduction));
   const stunnerCost = Math.floor(CONSTANTS.MONSTER_TYPES.STUNNER.cost * (1 - costReduction));
   const invisibleCost = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.cost * (1 - costReduction));
+  const saboteurCost = Math.floor(CONSTANTS.MONSTER_TYPES.SABOTEUR.cost * (1 - costReduction));
   const bossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.cost * (1 - costReduction));
   const bigbossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.cost * (1 - costReduction));
   
@@ -119,6 +123,7 @@ function updateMonsterCostDisplay() {
   const bufferElement = document.getElementById('buffer-cost');
   const stunnerElement = document.getElementById('stunner-cost');
   const invisibleElement = document.getElementById('invisible-cost');
+  const saboteurElement = document.getElementById('saboteur-cost');
   const bossElement = document.getElementById('boss-cost');
   const bigbossElement = document.getElementById('bigboss-cost');
   
@@ -129,6 +134,7 @@ function updateMonsterCostDisplay() {
   if (bufferElement) bufferElement.textContent = `💰 ${bufferCost}`;
   if (stunnerElement) stunnerElement.textContent = `💰 ${stunnerCost}`;
   if (invisibleElement) invisibleElement.textContent = `💰 ${invisibleCost}`;
+  if (saboteurElement) saboteurElement.textContent = `💰 ${saboteurCost}`;
   if (bossElement) bossElement.textContent = `💰 ${bossCost}`;
   if (bigbossElement) bigbossElement.textContent = `💰 ${bigbossCost}`;
 }
