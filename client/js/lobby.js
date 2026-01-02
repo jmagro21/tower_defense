@@ -34,6 +34,32 @@ function initSocket() {
 
   socket.on(CONSTANTS.SOCKET_EVENTS.AUTH_SUCCESS, (data) => {
     console.log('Authentifié:', data.username);
+    if (data.reconnected) {
+      showToast('🔄 Reconnexion réussie !', 'success');
+    }
+  });
+  
+  // Gestion de la reconnexion
+  socket.on('RECONNECTED', (data) => {
+    console.log('🔄 Reconnecté au salon:', data.roomCode);
+    currentRoomCode = data.roomCode;
+    localStorage.setItem('currentRoom', data.roomCode);
+    
+    // Restaurer l'état du jeu si en cours
+    if (data.roomState === 'playing') {
+      showToast('🔄 Partie restaurée !', 'success');
+      // Le jeu continue, pas besoin de réinitialiser
+    }
+  });
+  
+  // Un autre joueur est en train de se déconnecter (délai de grâce)
+  socket.on('PLAYER_DISCONNECTING', (data) => {
+    showToast(`⏳ ${data.username} a perdu la connexion... (5s pour revenir)`, 'warning');
+  });
+  
+  // Un joueur s'est reconnecté
+  socket.on('PLAYER_RECONNECTED', (data) => {
+    showToast(`🔄 ${data.username} s'est reconnecté !`, 'success');
   });
   
   socket.on(CONSTANTS.SOCKET_EVENTS.AUTH_ERROR, (data) => {

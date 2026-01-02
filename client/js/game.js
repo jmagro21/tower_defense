@@ -159,11 +159,21 @@ function create() {
     loop: true
   });
 
+  // Nettoyage des projectiles orphelins (ceux qui sont restés bloqués)
   this.time.addEvent({
-    delay: 10000, // Réduit à 10 secondes car les projectiles sont nettoyés automatiquement maintenant
+    delay: 5000,
     callback: () => {
-      if (gameScene && gameScene.tweens) {
-        gameScene.tweens.killAll();
+      if (gameScene && gameScene.children) {
+        // Nettoyer les cercles (projectiles) qui sont restés bloqués
+        gameScene.children.list.forEach(child => {
+          // Si c'est un cercle de projectile (pas un cercle de tour ou d'aura)
+          if (child && child.type === 'Arc' && child.radius <= 5 && child.depth === 100) {
+            // Projectile orphelin, le détruire
+            if (child.active) {
+              child.destroy();
+            }
+          }
+        });
       }
     },
     loop: true

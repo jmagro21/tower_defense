@@ -46,9 +46,9 @@ function setupGameEvents() {
     const tower = towers.find(t => t.x === data.tower.x && t.y === data.tower.y);
     
     if (tower) {
-      // Vérifier les valeurs avant et après
-      const oldDamage = tower.damage;
-      const oldFireRate = tower.fireRate;
+      // Vérifier les valeurs avant et après (avec valeurs par défaut pour éviter les crashes)
+      const oldDamage = tower.damage || 0;
+      const oldFireRate = tower.fireRate || 1000;
       
       // Récupérer les bonus de défense pour recalculer les dégâts avec bonus
       const defenseBonuses = getDefenseBonuses();
@@ -108,32 +108,65 @@ function setupGameEvents() {
     playerMoney = data.money;
     
     // Trouver la tour par son ancienne position
-    const tower = towers.find(t => t.x === data.oldX && t.y === data.oldY);
-    if (tower) {
-      // Libérer l'ancienne case
-      freeCell(tower.x, tower.y);
+    const towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
+    if (towerIndex !== -1) {
+      const oldTower = towers[towerIndex];
       
-      // Mettre à jour la position
-      tower.x = data.newX;
-      tower.y = data.newY;
+      // Libérer l'ancienne case
+      freeCell(data.oldX, data.oldY);
+      
+      // Sauvegarder les données importantes de l'ancienne tour
+      const savedData = {
+        targetMode: oldTower.targetMode || 'closest',
+        abilities: oldTower.abilities || [],
+        abilityIcons: oldTower.abilityIcons || []
+      };
+      
+      // Supprimer tous les éléments graphiques de l'ancienne tour
+      if (oldTower.sprite) oldTower.sprite.destroy();
+      if (oldTower.rangeCircle) oldTower.rangeCircle.destroy();
+      if (oldTower.goldAura) oldTower.goldAura.destroy();
+      if (oldTower.researchAura) oldTower.researchAura.destroy();
+      if (oldTower.levelText) oldTower.levelText.destroy();
+      if (oldTower.stunEffect) oldTower.stunEffect.destroy();
+      if (oldTower.stunIcon) oldTower.stunIcon.destroy();
+      if (savedData.abilityIcons) {
+        savedData.abilityIcons.forEach(icon => {
+          if (icon && icon.destroy) icon.destroy();
+        });
+      }
+      
+      // Retirer de la liste des tours
+      towers.splice(towerIndex, 1);
+      
+      // Recréer la tour à la nouvelle position avec toutes ses stats
+      const newTowerData = {
+        ...data.tower,
+        x: data.tower.x,
+        y: data.tower.y
+      };
+      
+      // Ajouter la tour à la scène (cette fonction gère tout le visuel)
+      addTowerToScene(newTowerData);
       
       // Occuper la nouvelle case
-      occupyCell(data.newX, data.newY);
+      occupyCell(data.tower.x, data.tower.y);
       
-      // Déplacer le sprite et le cercle de portée
-      if (tower.sprite) {
-        tower.sprite.setPosition(data.newX, data.newY);
-      }
-      if (tower.rangeCircle) {
-        tower.rangeCircle.setPosition(data.newX, data.newY);
-      }
-      
-      // Déplacer aussi les auras si elles existent
-      if (tower.goldAura) {
-        tower.goldAura.setPosition(data.newX, data.newY);
-      }
-      if (tower.researchAura) {
-        tower.researchAura.setPosition(data.newX, data.newY);
+      // Restaurer les données sauvegardées sur la nouvelle tour
+      const newTower = towers.find(t => t.x === data.tower.x && t.y === data.tower.y);
+      if (newTower) {
+        newTower.targetMode = savedData.targetMode;
+        newTower.abilities = savedData.abilities;
+        
+        // Recréer les icônes de compétences
+        if (savedData.abilities && savedData.abilities.length > 0) {
+          savedData.abilities.forEach(abilityId => {
+            const ability = CONSTANTS.TOWER_ABILITIES[abilityId.toUpperCase()];
+            if (ability) {
+              addAbilityIndicator(newTower, ability);
+            }
+          });
+        }
       }
       
       showToast('✅ Tour déplacée !', 'success');
@@ -150,6 +183,16 @@ function setupGameEvents() {
       freeCell(tower.x, tower.y);
       if (tower.sprite) tower.sprite.destroy();
       if (tower.rangeCircle) tower.rangeCircle.destroy();
+      if (tower.goldAura) tower.goldAura.destroy();
+      if (tower.researchAura) tower.researchAura.destroy();
+      if (tower.levelText) tower.levelText.destroy();
+      if (tower.stunEffect) tower.stunEffect.destroy();
+      if (tower.stunIcon) tower.stunIcon.destroy();
+      if (tower.abilityIcons) {
+        tower.abilityIcons.forEach(icon => {
+          if (icon && icon.destroy) icon.destroy();
+        });
+      }
       towers.splice(towerIndex, 1);
       showToast(`Tour vendue ! +${data.refund}💰`, 'success');
     }

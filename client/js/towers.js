@@ -304,33 +304,41 @@ function openTowerMenu(towerData, container) {
   const currentFireRate = selectedTower.fireRate || towerConfig.fireRate || 1000;
   const currentRange = selectedTower.range || towerConfig.range || 100;
   
-  // Initialiser les stats par défaut avec des valeurs de secours
-  let newDamage = currentDamage + (towerConfig.damageUpgrade || 0);
-  let newFireRate = currentFireRate + (towerConfig.fireRateUpgrade || 0);
+  // Calculer le multiplicateur actuel de cadence
+  const currentMultiplier = 1000 / currentFireRate;
+  
+  // Initialiser les stats par défaut
+  let newDamage = currentDamage;
+  let newFireRate = currentFireRate;
   let newRange = currentRange;
   
-  // Appliquer les bonuses selon le type de tour
+  // Appliquer les améliorations selon le type de tour
+  // Bonus de cadence en flat: Rapide +0.20x, Basique +0.10x, Sniper +0.10x, Gold/Research: aucun
   if (selectedTower.id === 'basic') {
-    // Basique: dégats et cadence
+    // Basique: dégats et +0.10x de cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-    // fireRateUpgrade est négatif (-150), les bonus amplifient cette réduction
-    newFireRate = currentFireRate + (towerConfig.fireRateUpgrade || 0) * (1 + defenseBonuses.attackSpeedBonus / 100);
+    const newMultiplier = currentMultiplier + 0.10 * (1 + defenseBonuses.attackSpeedBonus / 100);
+    newFireRate = Math.max(200, Math.floor(1000 / newMultiplier));
   } else if (selectedTower.id === 'sniper') {
-    // Sniper: niveau 1-5 = range et dégats, niveau 5+ = attaque et vitesse
+    // Sniper: niveau 1-5 = range et dégats, niveau 5+ = dégats et +0.10x cadence
     if ((selectedTower.level || 1) < 5) {
       newRange = currentRange + 50;
       newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
       newFireRate = currentFireRate;
     } else {
       newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-      // fireRateUpgrade est négatif (-300), les bonus amplifient cette réduction
-      newFireRate = currentFireRate + (towerConfig.fireRateUpgrade || 0) * (1 + defenseBonuses.attackSpeedBonus / 100);
+      const newMultiplier = currentMultiplier + 0.10 * (1 + defenseBonuses.attackSpeedBonus / 100);
+      newFireRate = Math.max(500, Math.floor(1000 / newMultiplier));
     }
   } else if (selectedTower.id === 'rapid') {
-    // Rapide: uniquement attaque et vitesse (vitesse augmente plus)
+    // Rapide: dégats et +0.20x de cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-    // fireRateUpgrade est négatif (-75), on amplifie x1.5 et avec les bonus
-    newFireRate = currentFireRate + ((towerConfig.fireRateUpgrade || 0) * 1.5) * (1 + defenseBonuses.attackSpeedBonus / 100);
+    const newMultiplier = currentMultiplier + 0.20 * (1 + defenseBonuses.attackSpeedBonus / 100);
+    newFireRate = Math.max(100, Math.floor(1000 / newMultiplier));
+  } else if (selectedTower.id === 'gold' || selectedTower.id === 'research') {
+    // Gold et Research: seulement les dégats, pas de bonus de cadence
+    newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+    newFireRate = currentFireRate;
   }
   
   // S'assurer que les valeurs sont valides

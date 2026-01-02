@@ -4,6 +4,8 @@ const { SOCKET_EVENTS, TOWER_TYPES, MONSTER_TYPES } = require('../../shared/cons
 
 const rooms = new Map(); // code -> GameRoom
 const playerRooms = new Map(); // socketId -> room code
+const disconnectedPlayers = new Map(); // odlSocketId -> { timeout, roomCode, userId, playerData }
+const userToSocket = new Map(); // odlSocketId -> newSocketId (pour la reconnexion)
 
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -57,7 +59,53 @@ module.exports = (io) => {
       if (decoded) {
         currentUser = decoded;
         console.log(`✓ Socket authentifiée: ${decoded.username}`);
-        socket.emit(SOCKET_EVENTS.AUTH_SUCCESS, { username: decoded.username });
+        
+        // Vérifier si ce joueur était déconnecté et tente de se reconnecter
+        let reconnected = false;
+        for (const [oldSocketId, data] of disconnectedPlayers.entries()) {
+          if (data.username === decoded.username) {
+            // Annuler le timeout de déconnexion
+            clearTimeout(data.timeout);
+            disconnectedPlayers.delete(oldSocketId);
+            
+            // Restaurer la session du joueur
+            const room = rooms.get(data.roomCode);
+            if (room) {
+              // Mettre à jour le socketId dans la room
+              const playerData = room.players.get(oldSocketId);
+              if (playerData) {
+                room.players.delete(oldSocketId);
+                room.players.set(socket.id, playerData);
+              }
+              
+              // Mettre à jour les mappings
+              playerRooms.set(socket.id, data.roomCode);
+              socket.join(data.roomCode);
+              
+              console.log(`🔄 Joueur ${decoded.username} reconnecté au salon ${data.roomCode}`);
+              
+              // Informer le joueur de sa reconnexion
+              socket.emit('RECONNECTED', {
+                roomCode: data.roomCode,
+                playerData: playerData,
+                roomState: room.state
+              });
+              
+              // Informer les autres joueurs
+              socket.to(data.roomCode).emit('PLAYER_RECONNECTED', {
+                username: decoded.username
+              });
+              
+              reconnected = true;
+            }
+            break;
+          }
+        }
+        
+        socket.emit(SOCKET_EVENTS.AUTH_SUCCESS, { 
+          username: decoded.username,
+          reconnected: reconnected
+        });
       } else {
         console.error(`✗ Token socket invalide (${socket.id})`);
         socket.emit(SOCKET_EVENTS.AUTH_ERROR, { message: 'Token invalide' });
@@ -233,24 +281,33 @@ module.exports = (io) => {
       }
       
       // Appliquer les améliorations selon le type de tour
+      // Pour la cadence: on utilise des bonus de multiplicateur flat
+      // multiplicateur = 1000 / fireRate, donc newFireRate = 1000 / (oldMultiplier + bonus)
       if (tower.id === 'basic') {
-        // Basique: dégats +3 et fireRate augmente (diminue en ms)
+        // Basique: dégats et +0.10x de cadence par niveau
         tower.damage += towerConfig.damageUpgrade || 0;
-        tower.fireRate = Math.max(200, tower.fireRate - (towerConfig.fireRateUpgrade || 100));
+        const currentMultiplier = 1000 / tower.fireRate;
+        const newMultiplier = currentMultiplier + 0.10;
+        tower.fireRate = Math.max(200, Math.floor(1000 / newMultiplier));
       } else if (tower.id === 'sniper') {
-        // Sniper: niveau 1-5 = range, niveau 5+ = fireRate
+        // Sniper: niveau 1-5 = range et dégats, niveau 5+ = dégats et +0.10x cadence
         if (tower.level <= 5) {
           tower.range = (tower.range || towerConfig.range) + 50;
           tower.damage += towerConfig.damageUpgrade || 0;
         } else {
           tower.damage += towerConfig.damageUpgrade || 0;
-          tower.fireRate = Math.max(500, tower.fireRate - (towerConfig.fireRateUpgrade || 300));
+          const currentMultiplier = 1000 / tower.fireRate;
+          const newMultiplier = currentMultiplier + 0.10;
+          tower.fireRate = Math.max(500, Math.floor(1000 / newMultiplier));
         }
       } else if (tower.id === 'rapid') {
-        // Rapide: uniquement dégats et fireRate (fireRate augmente plus)
+        // Rapide: dégats et +0.20x de cadence par niveau
         tower.damage += towerConfig.damageUpgrade || 0;
-        tower.fireRate = Math.max(100, tower.fireRate - (towerConfig.fireRateUpgrade || 75));
+        const currentMultiplier = 1000 / tower.fireRate;
+        const newMultiplier = currentMultiplier + 0.20;
+        tower.fireRate = Math.max(100, Math.floor(1000 / newMultiplier));
       }
+      // Gold et Research: pas de bonus de cadence, seulement les dégâts de base
 
       socket.emit('TOWER_UPGRADED', {
         tower,
@@ -268,21 +325,24 @@ module.exports = (io) => {
       if (!player) return;
 
       // Trouver la tour par son ancienne position
-      const tower = player.towers.find(t => t.x === oldX && t.y === oldY);
-      if (!tower) return;
+      const towerIndex = player.towers.findIndex(t => t.x === oldX && t.y === oldY);
+      if (towerIndex === -1) return;
 
       const moveCost = 25;
       if (player.money < moveCost) return;
 
       player.money -= moveCost;
+      
+      // Copier les données de la tour et mettre à jour la position
+      const tower = player.towers[towerIndex];
       tower.x = newX;
       tower.y = newY;
 
+      // Envoyer toutes les données de la tour pour recréation côté client
       socket.emit('TOWER_MOVED', {
         oldX,
         oldY,
-        newX,
-        newY,
+        tower: { ...tower },  // Envoyer toutes les stats de la tour
         money: player.money
       });
     });
@@ -406,43 +466,85 @@ module.exports = (io) => {
       }
     });
 
-    // Quitter le salon
+    // Quitter le salon (volontaire - pas de délai de grâce)
     socket.on(SOCKET_EVENTS.LEAVE_ROOM, () => {
-      handleDisconnect();
+      handleDisconnect(true); // forceLeave = true
     });
 
     socket.on('disconnect', () => {
       console.log(`Client déconnecté: ${socket.id}`);
-      handleDisconnect();
+      handleDisconnect(false); // forceLeave = false, délai de grâce
     });
 
-    function handleDisconnect() {
+    function handleDisconnect(forceLeave = false) {
       const roomCode = playerRooms.get(socket.id);
-      if (roomCode) {
-        const room = rooms.get(roomCode);
-        if (room) {
-          room.removePlayer(socket.id);
-          
-          if (room.players.size === 0) {
-            rooms.delete(roomCode);
-          } else {
-            socket.to(roomCode).emit(SOCKET_EVENTS.PLAYER_LEFT, {
-              username: currentUser?.username,
-              players: room.getPlayerData()
-            });
-
-            // Vérifier si le jeu doit se terminer
-            if (room.state === 'playing' && room.isGameOver()) {
-              const winner = room.getWinner();
-              io.to(roomCode).emit(SOCKET_EVENTS.GAME_OVER, {
-                winner: winner?.username || 'Aucun',
-                players: room.getPlayerData()
-              });
-            }
-          }
-        }
+      if (!roomCode) return;
+      
+      const room = rooms.get(roomCode);
+      if (!room) {
         playerRooms.delete(socket.id);
+        return;
       }
+      
+      const playerData = room.players.get(socket.id);
+      
+      // Si c'est une déconnexion (pas un leave volontaire) et que la partie est en cours,
+      // donner un délai de grâce de 5 secondes pour se reconnecter
+      if (!forceLeave && room.state === 'playing' && currentUser) {
+        console.log(`⏳ Délai de grâce de 5s pour ${currentUser.username}...`);
+        
+        // Informer les autres joueurs
+        socket.to(roomCode).emit('PLAYER_DISCONNECTING', {
+          username: currentUser.username,
+          gracePeriod: 5000
+        });
+        
+        // Sauvegarder les données et programmer la suppression
+        const timeout = setTimeout(() => {
+          console.log(`❌ Délai expiré pour ${currentUser?.username}, suppression...`);
+          disconnectedPlayers.delete(socket.id);
+          
+          // Maintenant vraiment supprimer le joueur
+          finalizeDisconnect(socket.id, roomCode, room);
+        }, 5000);
+        
+        disconnectedPlayers.set(socket.id, {
+          timeout,
+          roomCode,
+          username: currentUser.username,
+          playerData
+        });
+        
+        // Ne pas supprimer le joueur immédiatement, mais le retirer du mapping socket
+        playerRooms.delete(socket.id);
+        return;
+      }
+      
+      // Sinon, déconnexion immédiate (leave volontaire ou pas en jeu)
+      finalizeDisconnect(socket.id, roomCode, room);
+    }
+    
+    function finalizeDisconnect(socketId, roomCode, room) {
+      room.removePlayer(socketId);
+      
+      if (room.players.size === 0) {
+        rooms.delete(roomCode);
+      } else {
+        io.to(roomCode).emit(SOCKET_EVENTS.PLAYER_LEFT, {
+          username: currentUser?.username,
+          players: room.getPlayerData()
+        });
+
+        // Vérifier si le jeu doit se terminer
+        if (room.state === 'playing' && room.isGameOver()) {
+          const winner = room.getWinner();
+          io.to(roomCode).emit(SOCKET_EVENTS.GAME_OVER, {
+            winner: winner?.username || 'Aucun',
+            players: room.getPlayerData()
+          });
+        }
+      }
+      playerRooms.delete(socketId);
     }
   });
 };

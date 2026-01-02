@@ -130,6 +130,7 @@ function showResearchPointAnimation(points = 1, fromTower = null) {
   );
   floatingText.setOrigin(0.5);
   floatingText.setDepth(100);
+  floatingText.isFloatingResearchText = true; // Marqueur pour le nettoyage
   
   // Animation de montée et disparition
   gameScene.tweens.add({
@@ -142,6 +143,13 @@ function showResearchPointAnimation(points = 1, fromTower = null) {
       if (floatingText && floatingText.active) {
         floatingText.destroy();
       }
+    }
+  });
+  
+  // Fallback: détruire le texte après 2 secondes même si le tween échoue
+  gameScene.time.delayedCall(2000, () => {
+    if (floatingText && floatingText.active) {
+      floatingText.destroy();
     }
   });
 }
@@ -160,9 +168,19 @@ function completeResearch(category, research) {
     updateTowerShopDisplay();
   }
   
+  // Mettre à jour l'affichage de la cadence si c'est une recherche de vitesse d'attaque
+  if (category === 'defense' && research === 'towerAttackSpeed') {
+    updateTowerShopDisplay();
+  }
+  
   // Mettre à jour l'affichage des coûts des monstres si c'est une recherche de coût
   if (category === 'attack' && research === 'monsterCost') {
     updateMonsterCostDisplay();
+  }
+  
+  // Rafraîchir le menu de tour si une tour est sélectionnée
+  if (selectedTower && selectedTower.sprite) {
+    openTowerMenu(selectedTower, selectedTower.sprite);
   }
   
   updateResearchProgressBar();

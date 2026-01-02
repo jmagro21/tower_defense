@@ -6,7 +6,22 @@ function spawnMonster(monsterData) {
   // (que ce soit depuis le serveur ou depuis autoSpawnMonster)
   // Donc on utilise directement les données sans les modifier
   
-  const container = gameScene.add.container(path[0].x, path[0].y);
+  // Déterminer la position initiale
+  // Si pathIndex et progress sont fournis (monstre divisé), utiliser la position calculée
+  let startX = path[0].x;
+  let startY = path[0].y;
+  
+  if (monsterData.pathIndex !== undefined && monsterData.progress !== undefined && monsterData.pathIndex < path.length) {
+    const currentPathIndex = monsterData.pathIndex;
+    const progress = monsterData.progress;
+    const current = path[currentPathIndex];
+    const next = path[Math.min(currentPathIndex + 1, path.length - 1)];
+    
+    startX = current.x + (next.x - current.x) * progress;
+    startY = current.y + (next.y - current.y) * progress;
+  }
+  
+  const container = gameScene.add.container(startX, startY);
   
   let monsterGraphics;
 
@@ -126,12 +141,12 @@ function spawnMonster(monsterData) {
     sprite: container,
     healthBar: healthBar,
     hpText: hpText,
-    pathIndex: 0,
-    currentHealth: monsterData.health,
-    maxHealth: monsterData.health,
-    baseHealth: monsterData.health,  // Santé de base sans buff
-    baseSpeed: monsterData.speed,    // Vitesse de base sans ralentissement
-    progress: 0,
+    pathIndex: monsterData.pathIndex || 0,
+    currentHealth: monsterData.currentHealth || monsterData.health,
+    maxHealth: monsterData.maxHealth || monsterData.health,
+    baseHealth: monsterData.baseHealth || monsterData.health,  // Santé de base sans buff
+    baseSpeed: monsterData.baseSpeed || monsterData.speed,    // Vitesse de base sans ralentissement
+    progress: monsterData.progress || 0,
     isBuffed: false,  // Indique si le monstre est actuellement bufé
     buffCircle: null,  // Circle visuel pour le buffer
     stunCount: 0,      // Nombre de tours stunnées (pour le stunner)
@@ -149,6 +164,58 @@ function spawnMonster(monsterData) {
     container.add(buffCircle);
     monster.buffCircle = buffCircle;
   }
+
+  monsters.push(monster);
+}
+
+// Fonction spéciale pour spawn les monstres divisés à une position précise
+function spawnSplitMonster(monsterData) {
+  if (!gameScene) return;
+  
+  // Utiliser la position personnalisée si fournie
+  const startX = monsterData.startX || path[0].x;
+  const startY = monsterData.startY || path[0].y;
+  
+  const container = gameScene.add.container(startX, startY);
+  
+  // Le monstre divisé utilise toujours le visuel du splitter mais plus petit
+  const body = gameScene.add.circle(0, 0, 10, 0x16a085);  // Plus petit
+  const blob1 = gameScene.add.circle(-4, -3, 4, 0x1abc9c);
+  const blob2 = gameScene.add.circle(4, -3, 4, 0x1abc9c);
+  const eye1 = gameScene.add.circle(-3, -1, 2, 0xffffff);
+  const eye2 = gameScene.add.circle(3, -1, 2, 0xffffff);
+  const pupil1 = gameScene.add.circle(-3, -1, 1, 0x000000);
+  const pupil2 = gameScene.add.circle(3, -1, 1, 0x000000);
+  
+  [body, blob1, blob2, eye1, eye2, pupil1, pupil2].forEach(g => container.add(g));
+
+  const healthBarBg = gameScene.add.rectangle(0, -20, 24, 4, 0x000000);
+  const healthBar = gameScene.add.rectangle(0, -20, 24, 4, 0x27ae60);
+  healthBar.setOrigin(0.5);
+  container.add(healthBarBg);
+  container.add(healthBar);
+
+  const hpText = gameScene.add.text(0, -27, `${monsterData.health}`, {
+    fontSize: '9px', fill: '#fff', fontStyle: 'bold',
+    stroke: '#000', strokeThickness: 2
+  });
+  hpText.setOrigin(0.5);
+  container.add(hpText);
+
+  const monster = {
+    ...monsterData,
+    sprite: container,
+    healthBar: healthBar,
+    hpText: hpText,
+    isBuffed: false,
+    buffCircle: null,
+    stunCount: 0,
+    effects: {
+      fire: null,
+      freeze: null,
+      poison: null
+    }
+  };
 
   monsters.push(monster);
 }
@@ -279,6 +346,13 @@ function shootAtMonster(tower, monster) {
   
   // Stocker la référence du monstre cible
   projectile.targetMonster = monster;
+  
+  // Fallback: détruire le projectile après 500ms même si le tween échoue
+  gameScene.time.delayedCall(500, () => {
+    if (projectile && projectile.active) {
+      projectile.destroy();
+    }
+  });
   
   // Si c'est un stunner et qu'il n'a pas encore stun 2 tours
   if (monster.id === 'stunner' && monster.stunCount < CONSTANTS.MONSTER_TYPES.STUNNER.maxStuns) {
@@ -565,36 +639,37 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
   
   // Si le monstre peut se diviser, créer deux nouveaux monstres
   if (shouldSplit && gameScene) {
-    const currentPos = monster.sprite;
+    const currentPosX = monster.sprite.x;
+    const currentPosY = monster.sprite.y;
     const currentPathIndex = monster.pathIndex;
     const currentProgress = monster.progress;
     
     // Créer deux monstres plus petits
     for (let i = 0; i < 2; i++) {
+      // Décaler légèrement les deux monstres
+      const offset = i === 0 ? -15 : 15;
+      
       const splitMonster = {
-        ...monster,
+        id: monster.id,
+        name: monster.name,
         health: Math.floor(monster.maxHealth / 2),
         currentHealth: Math.floor(monster.maxHealth / 2),
         maxHealth: Math.floor(monster.maxHealth / 2),
+        baseHealth: Math.floor(monster.maxHealth / 2),
         speed: Math.floor(monster.speed * 1.25), // +25% de vitesse
+        baseSpeed: Math.floor(monster.baseSpeed * 1.25),
         reward: Math.floor(monster.reward / 2),
         canSplit: false, // Ne peut plus se diviser
         isSplit: true, // Marquer comme divisé
         pathIndex: currentPathIndex,
-        progress: currentProgress
+        progress: currentProgress,
+        // Position ajustée
+        startX: currentPosX + offset,
+        startY: currentPosY
       };
       
-      // Spawn le monstre divisé
-      spawnMonster(splitMonster);
-      
-      // Récupérer le dernier monstre ajouté et ajuster sa position
-      const newMonster = monsters[monsters.length - 1];
-      if (newMonster && newMonster.sprite) {
-        // Décaler légèrement les deux monstres
-        const offset = i === 0 ? -15 : 15;
-        newMonster.sprite.x = currentPos.x + offset;
-        newMonster.sprite.y = currentPos.y;
-      }
+      // Spawn le monstre divisé avec position personnalisée
+      spawnSplitMonster(splitMonster);
     }
     
     showToast('🔀 Monstre divisé !', 'warning');
