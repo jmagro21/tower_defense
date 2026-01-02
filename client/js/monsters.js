@@ -116,39 +116,6 @@ function spawnMonster(monsterData) {
       yoyo: true,
       repeat: -1
     });
-  } else if (monsterData.id === 'saboteur') {
-    // Saboteur - forme de petit robot/gremlins avec clé à molette
-    const body = gameScene.add.circle(0, 0, 14, 0x2c3e50);
-    const visor = gameScene.add.rectangle(0, -3, 18, 6, 0xe74c3c);
-    const eye1 = gameScene.add.circle(-4, -3, 2, 0xf1c40f);
-    const eye2 = gameScene.add.circle(4, -3, 2, 0xf1c40f);
-    // Clé à molette
-    const wrench1 = gameScene.add.rectangle(10, 5, 4, 12, 0x7f8c8d);
-    const wrench2 = gameScene.add.circle(10, 11, 4, 0x7f8c8d);
-    // Boulons décoratifs
-    const bolt1 = gameScene.add.circle(-8, 8, 2, 0x95a5a6);
-    const bolt2 = gameScene.add.circle(8, -10, 2, 0x95a5a6);
-    const bolt3 = gameScene.add.circle(-10, -8, 2, 0x95a5a6);
-    // Aura de sabotage
-    const aura = gameScene.add.circle(0, 0, 20, 0x9b59b6, 0.15);
-    monsterGraphics = [aura, body, visor, eye1, eye2, wrench1, wrench2, bolt1, bolt2, bolt3];
-    
-    // Animation de la clé qui tourne
-    gameScene.tweens.add({
-      targets: [wrench1, wrench2],
-      angle: 360,
-      duration: 2000,
-      repeat: -1
-    });
-    
-    // Clignotement des yeux
-    gameScene.tweens.add({
-      targets: [eye1, eye2],
-      alpha: 0.3,
-      duration: 300,
-      yoyo: true,
-      repeat: -1
-    });
   } else if (monsterData.id === 'bigboss') {
     // TITAN - Big Boss géant et terrifiant
     // Corps principal massif
@@ -1002,11 +969,6 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
     }
     
     showToast('💀 TITAN DÉTRUIT - 5 BOSS ÉMERGENT !', 'danger');
-  }
-  
-  // Vérifier si c'est un Saboteur - pénalise la tour qui l'a tué
-  if (monster.isSaboteur && killerTower) {
-    penalizeTowerForSaboteurKill(killerTower);
   }
   
   // Vérifier si le monstre peut se diviser

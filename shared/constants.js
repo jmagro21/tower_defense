@@ -214,15 +214,6 @@ module.exports = {
       speed: 45,
       reward: 90,
       isInvisible: true    // Invisible, seules les tours avec true_sight peuvent l'attaquer
-    },
-    SABOTEUR: {
-      id: 'saboteur',
-      name: 'Saboteur',
-      cost: 500,
-      health: 250,
-      speed: 30,
-      reward: 0,           // Ne donne pas d'or !
-      isSaboteur: true     // Réduit le niveau de la tour qui le tue
     }
   },
 
