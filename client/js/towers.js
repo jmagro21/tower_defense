@@ -345,7 +345,14 @@ function openTowerMenu(towerData, container) {
   const newFireRateMultiplier = (1000 / newFireRate).toFixed(2);
   
   // Coût d'amélioration réduit par la recherche
-  const upgradeCost = Math.floor(towerConfig.upgradeCost * (1 - defenseBonuses.upgradeCostReduction / 100));
+  // Pour les tours Gold et Research: prix x2 tous les 5 niveaux
+  let baseUpgradeCost = towerConfig.upgradeCost;
+  if (selectedTower.id === 'gold' || selectedTower.id === 'research') {
+    const currentLevel = selectedTower.level || 1;
+    const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
+    baseUpgradeCost = towerConfig.upgradeCost * multiplier;
+  }
+  const upgradeCost = Math.floor(baseUpgradeCost * (1 - defenseBonuses.upgradeCostReduction / 100));
   
   console.log('Mise à jour du DOM...');
   
@@ -602,7 +609,7 @@ function moveTower(x, y) {
   }
   
   // Envoyer la demande de déplacement au serveur
-  socket.emit('MOVE_TOWER', {
+  socket.emit(CONSTANTS.SOCKET_EVENTS.MOVE_TOWER, {
     oldX: movingTower.x,
     oldY: movingTower.y,
     newX: x,
@@ -630,7 +637,14 @@ function upgradeTower() {
   const defenseBonuses = getDefenseBonuses();
   
   // Coût d'amélioration réduit par la recherche
-  const upgradeCost = Math.floor((towerConfig.upgradeCost || 50) * (1 - defenseBonuses.upgradeCostReduction / 100));
+  // Pour les tours Gold et Research: prix x2 tous les 5 niveaux
+  let baseUpgradeCost = towerConfig.upgradeCost || 50;
+  if (selectedTower.id === 'gold' || selectedTower.id === 'research') {
+    const currentLevel = selectedTower.level || 1;
+    const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
+    baseUpgradeCost = towerConfig.upgradeCost * multiplier;
+  }
+  const upgradeCost = Math.floor(baseUpgradeCost * (1 - defenseBonuses.upgradeCostReduction / 100));
   
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');

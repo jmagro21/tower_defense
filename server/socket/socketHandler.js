@@ -209,7 +209,15 @@ module.exports = (io) => {
       if (!tower) return;
 
       const towerConfig = TOWER_TYPES[tower.id.toUpperCase()];
-      const upgradeCost = towerConfig.upgradeCost;
+      
+      // Calculer le coût d'amélioration
+      // Pour les tours Gold et Research: prix x2 tous les 5 niveaux
+      let upgradeCost = towerConfig.upgradeCost;
+      if (tower.id === 'gold' || tower.id === 'research') {
+        const currentLevel = tower.level || 1;
+        const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
+        upgradeCost = towerConfig.upgradeCost * multiplier;
+      }
 
       if (player.money < upgradeCost) return;
 
@@ -251,7 +259,7 @@ module.exports = (io) => {
     });
 
     // Déplacer une tour
-    socket.on('MOVE_TOWER', ({ towerId, x, y }) => {
+    socket.on('MOVE_TOWER', ({ oldX, oldY, newX, newY }) => {
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -259,19 +267,22 @@ module.exports = (io) => {
       const player = room.players.get(socket.id);
       if (!player) return;
 
-      if (!player.towers || !player.towers[towerId]) return;
+      // Trouver la tour par son ancienne position
+      const tower = player.towers.find(t => t.x === oldX && t.y === oldY);
+      if (!tower) return;
 
       const moveCost = 25;
       if (player.money < moveCost) return;
 
       player.money -= moveCost;
-      const tower = player.towers[towerId];
-      tower.x = x;
-      tower.y = y;
+      tower.x = newX;
+      tower.y = newY;
 
       socket.emit('TOWER_MOVED', {
-        towerId,
-        x, y,
+        oldX,
+        oldY,
+        newX,
+        newY,
         money: player.money
       });
     });

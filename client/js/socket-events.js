@@ -61,7 +61,8 @@ function setupGameEvents() {
       
       // Réappliquer les bonus de recherche sur les dégâts du serveur
       tower.damage = baseDamage * (1 + defenseBonuses.damageBonus / 100);
-      tower.fireRate = baseFireRate / (1 + defenseBonuses.attackSpeedBonus / 100);
+      // Pour le fireRate: réduire le délai = augmenter la vitesse (multiplier par un facteur < 1)
+      tower.fireRate = baseFireRate * (1 - defenseBonuses.attackSpeedBonus / 100);
       tower.range = baseRange;
       
       // DEBUG: Afficher dans la console
@@ -106,24 +107,33 @@ function setupGameEvents() {
   socket.on('TOWER_MOVED', (data) => {
     playerMoney = data.money;
     
-    const tower = towers[data.towerId];
+    // Trouver la tour par son ancienne position
+    const tower = towers.find(t => t.x === data.oldX && t.y === data.oldY);
     if (tower) {
       // Libérer l'ancienne case
       freeCell(tower.x, tower.y);
       
       // Mettre à jour la position
-      tower.x = data.x;
-      tower.y = data.y;
+      tower.x = data.newX;
+      tower.y = data.newY;
       
       // Occuper la nouvelle case
-      occupyCell(data.x, data.y);
+      occupyCell(data.newX, data.newY);
       
       // Déplacer le sprite et le cercle de portée
       if (tower.sprite) {
-        tower.sprite.setPosition(data.x, data.y);
+        tower.sprite.setPosition(data.newX, data.newY);
       }
       if (tower.rangeCircle) {
-        tower.rangeCircle.setPosition(data.x, data.y);
+        tower.rangeCircle.setPosition(data.newX, data.newY);
+      }
+      
+      // Déplacer aussi les auras si elles existent
+      if (tower.goldAura) {
+        tower.goldAura.setPosition(data.newX, data.newY);
+      }
+      if (tower.researchAura) {
+        tower.researchAura.setPosition(data.newX, data.newY);
       }
       
       showToast('✅ Tour déplacée !', 'success');
