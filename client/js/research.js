@@ -1,17 +1,17 @@
 // Gestion du système de recherche
 let researchTree = {
   attack: {
-    monsterHealth: { level: 0, kills: 0, name: 'Renforcer les monstres', icon: '❤️' },
-    monsterSpeed: { level: 0, kills: 0, name: 'Accélérer les monstres', icon: '⚡' },
-    monsterCost: { level: 0, kills: 0, name: 'Réduire coût monstres', icon: '💰' }
+    monsterHealth: { level: 0, killsBuffer: 0, name: 'Renforcer les monstres', icon: '❤️' },
+    monsterSpeed: { level: 0, killsBuffer: 0, name: 'Accélérer les monstres', icon: '⚡' },
+    monsterCost: { level: 0, killsBuffer: 0, name: 'Réduire coût monstres', icon: '💰' }
   },
   defense: {
-    towerUpgradeCost: { level: 0, kills: 0, name: 'Amélioration moins chère', icon: '💎' },
-    towerDamage: { level: 0, kills: 0, name: 'Augmenter l\'attaque', icon: '⚔️' },
-    towerAttackSpeed: { level: 0, kills: 0, name: 'Accélérer attaque', icon: '🎯' }
+    towerUpgradeCost: { level: 0, killsBuffer: 0, name: 'Amélioration moins chère', icon: '💎' },
+    towerDamage: { level: 0, killsBuffer: 0, name: 'Augmenter l\'attaque', icon: '⚔️' },
+    towerAttackSpeed: { level: 0, killsBuffer: 0, name: 'Accélérer attaque', icon: '🎯' }
   },
   general: {
-    towerSize: { level: 0, kills: 0, name: 'Augmenter taille max tours', icon: '📏' }
+    towerSize: { level: 0, killsBuffer: 0, name: 'Augmenter taille max tours', icon: '📏' }
   }
 };
 
@@ -73,12 +73,19 @@ function getMaxTowerSize() {
 }
 
 // Ajouter un kill et progresser la recherche
-function addResearchKill() {
+// bonusPoints = points supplémentaires si le monstre était dans l'aura d'un laboratoire
+function addResearchKill(bonusPoints = 0, researchTower = null) {
   if (!currentResearch) return;
   
   const { category, research } = currentResearch;
   const targetKills = getKillsRequiredForLevel(researchTree[category][research].level + 1, category, research);
-  researchKills++;
+  
+  // Base: +1 pour chaque kill
+  const totalPoints = 1 + bonusPoints;
+  researchKills += totalPoints;
+  
+  // Afficher l'animation au-dessus d'une tour de recherche
+  showResearchPointAnimation(totalPoints, researchTower);
   
   // Mettre à jour la barre de progression
   updateResearchProgressBar();
@@ -87,6 +94,56 @@ function addResearchKill() {
   if (researchKills >= targetKills) {
     completeResearch(category, research);
   }
+}
+
+// Afficher l'animation +X au-dessus d'une tour de recherche
+function showResearchPointAnimation(points = 1, fromTower = null) {
+  if (!gameScene) return;
+  
+  // Trouver une tour de recherche pour afficher l'animation
+  let researchTower = fromTower;
+  if (!researchTower || researchTower.id !== 'research') {
+    // Chercher une tour de recherche aléatoire
+    const researchTowers = towers.filter(t => t.id === 'research' && t.sprite && t.sprite.active);
+    if (researchTowers.length > 0) {
+      researchTower = researchTowers[Math.floor(Math.random() * researchTowers.length)];
+    }
+  }
+  
+  if (!researchTower) return;
+  
+  // Créer le texte avec le nombre de points
+  const text = points > 1 ? `+${points} 🔬` : '+1 🔬';
+  const color = points > 1 ? '#00ffff' : '#00ff88'; // Cyan si bonus, vert sinon
+  
+  const floatingText = gameScene.add.text(
+    researchTower.x,
+    researchTower.y - 30,
+    text,
+    {
+      fontSize: points > 1 ? '22px' : '18px',
+      fontStyle: 'bold',
+      fill: color,
+      stroke: '#000',
+      strokeThickness: 3
+    }
+  );
+  floatingText.setOrigin(0.5);
+  floatingText.setDepth(100);
+  
+  // Animation de montée et disparition
+  gameScene.tweens.add({
+    targets: floatingText,
+    y: floatingText.y - 40,
+    alpha: 0,
+    duration: 1000,
+    ease: 'Power2',
+    onComplete: () => {
+      if (floatingText && floatingText.active) {
+        floatingText.destroy();
+      }
+    }
+  });
 }
 
 // Compléter une recherche
@@ -103,20 +160,26 @@ function completeResearch(category, research) {
     updateTowerShopDisplay();
   }
   
+  // Mettre à jour l'affichage des coûts des monstres si c'est une recherche de coût
+  if (category === 'attack' && research === 'monsterCost') {
+    updateMonsterCostDisplay();
+  }
+  
   updateResearchProgressBar();
   updateResearchUI();
 }
 
 // Démarrer une nouvelle recherche
 function startResearch(category, research) {
-  // Si une recherche est en cours, la sauvegarder
+  // Si une recherche est en cours, sauvegarder ses kills en buffer
   if (currentResearch) {
     const { category: oldCat, research: oldRes } = currentResearch;
-    researchTree[oldCat][oldRes].kills = researchKills;
+    researchTree[oldCat][oldRes].killsBuffer = researchKills;
   }
   
+  // Charger la nouvelle recherche et restaurer son buffer de kills
   currentResearch = { category, research };
-  researchKills = researchTree[category][research].kills || 0;
+  researchKills = researchTree[category][research].killsBuffer || 0;
   
   updateResearchProgressBar();
   showToast(`🔬 Recherche lancée: ${researchTree[category][research].name}`, 'info');
@@ -139,12 +202,21 @@ function updateResearchUI() {
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
     
+    // Calculer les stats actuelles et futures
+    const currentBonus = getResearchBonus(data.level);
+    const nextBonus = getResearchBonus(data.level + 1);
+    const bonusSign = key === 'monsterCost' ? '-' : '+'; // Réduction de coût est négative
+    
     attackHTML += `
       <div class="research-item ${buttonClass}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
           <span class="research-level">Nv.${data.level}</span>
+        </div>
+        <div class="research-stats">
+          <span class="current-bonus">${bonusSign}${currentBonus}%</span>
+          <span class="next-bonus">→ ${bonusSign}${nextBonus}%</span>
         </div>
         ${isCurrent ? `
           <div class="research-progress-bar">
@@ -168,12 +240,21 @@ function updateResearchUI() {
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
     
+    // Calculer les stats actuelles et futures
+    const currentBonus = getResearchBonus(data.level);
+    const nextBonus = getResearchBonus(data.level + 1);
+    const bonusSign = key === 'towerUpgradeCost' ? '-' : '+'; // Réduction de coût est négative
+    
     defenseHTML += `
       <div class="research-item ${buttonClass}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
           <span class="research-level">Nv.${data.level}</span>
+        </div>
+        <div class="research-stats">
+          <span class="current-bonus">${bonusSign}${currentBonus}%</span>
+          <span class="next-bonus">→ ${bonusSign}${nextBonus}%</span>
         </div>
         ${isCurrent ? `
           <div class="research-progress-bar">
@@ -197,12 +278,21 @@ function updateResearchUI() {
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
     
+    // Pour towerSize, afficher en nombre de tours au lieu de pourcentage
+    const currentBonus = key === 'towerSize' ? data.level * 5 : getResearchBonus(data.level);
+    const nextBonus = key === 'towerSize' ? (data.level + 1) * 5 : getResearchBonus(data.level + 1);
+    const bonusUnit = key === 'towerSize' ? ' tours' : '%';
+    
     generalHTML += `
       <div class="research-item ${buttonClass}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
           <span class="research-level">Nv.${data.level}</span>
+        </div>
+        <div class="research-stats">
+          <span class="current-bonus">+${currentBonus}${bonusUnit}</span>
+          <span class="next-bonus">→ +${nextBonus}${bonusUnit}</span>
         </div>
         ${isCurrent ? `
           <div class="research-progress-bar">
@@ -224,8 +314,8 @@ function updateResearchUI() {
 // Toggle la recherche (lancer ou annuler)
 function toggleResearch(category, research) {
   if (currentResearch?.category === category && currentResearch?.research === research) {
-    // Annuler la recherche en cours
-    researchTree[category][research].kills = researchKills;
+    // Annuler la recherche en cours et sauvegarder les kills en buffer
+    researchTree[category][research].killsBuffer = researchKills;
     currentResearch = null;
     researchKills = 0;
     updateResearchProgressBar();
@@ -253,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
-        modal.style.display = 'none';
+        modal.classList.add('hidden');
       }
     });
   }
@@ -265,6 +355,7 @@ function updateResearchProgressBar() {
   const progressFill = document.getElementById('research-progress-fill');
   const progressText = document.getElementById('research-progress-text');
   const progressName = document.getElementById('research-progress-name');
+  const researchButton = document.getElementById('research-button');
   
   if (!progressSection) return;
   
@@ -277,12 +368,21 @@ function updateResearchProgressBar() {
     // Afficher la section
     progressSection.classList.remove('hidden');
     
-    // Mettre à jour les éléments
+    // Mettre à jour les éléments du modal
     progressName.textContent = `${researchData.icon} ${researchData.name} (Nv.${researchData.level + 1})`;
     progressText.textContent = `${researchKills}/${killsNeeded}`;
     progressFill.style.width = progress + '%';
+    
+    // Mettre à jour la barre de progression du bouton
+    if (researchButton) {
+      researchButton.style.setProperty('--research-progress', progress + '%');
+    }
   } else {
     // Masquer la section si aucune recherche n'est en cours
     progressSection.classList.add('hidden');
+    // Remettre la progression à 0%
+    if (researchButton) {
+      researchButton.style.setProperty('--research-progress', '0%');
+    }
   }
 }

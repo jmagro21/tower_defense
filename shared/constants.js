@@ -99,6 +99,31 @@ module.exports = {
       upgradeCost: 75,
       damageUpgrade: 1.5,
       fireRateUpgrade: -75
+    },
+    GOLD: {
+      id: 'gold',
+      name: 'Tour Dorée',
+      cost: 250,
+      damage: 8,
+      range: 180,
+      fireRate: 2000,
+      upgradeCost: 80,
+      damageUpgrade: 2,
+      fireRateUpgrade: -150,
+      goldRadius: 150,  // Rayon du halo d'or
+      goldMultiplier: 2 // Multiplie les récompenses par 2
+    },
+    RESEARCH: {
+      id: 'research',
+      name: 'Tour Laboratoire',
+      cost: 300,
+      damage: 3,
+      range: 200,
+      fireRate: 1500,
+      upgradeCost: 100,
+      damageUpgrade: 1,
+      fireRateUpgrade: -100,
+      researchKillsPerHit: 1 // Génère des kills de recherche
     }
   },
 
@@ -135,6 +160,82 @@ module.exports = {
       health: 1000,
       speed: 10,
       reward: 200
+    },
+    SPLITTER: {
+      id: 'splitter',
+      name: 'Diviseur',
+      cost: 120,
+      health: 150,
+      speed: 40,
+      reward: 50,
+      canSplit: true  // Indique que ce monstre peut se diviser
+    },
+    BUFFER: {
+      id: 'buffer',
+      name: 'Soigneur',
+      cost: 200,
+      health: 200,
+      speed: 25,
+      reward: 80,
+      buffRadius: 100,  // Rayon du buff en pixels
+      healthBuff: 1.5   // Multiplie la vie par 1.5 (50% de boost)
+    },
+    STUNNER: {
+      id: 'stunner',
+      name: 'Paralyseur',
+      cost: 180,
+      health: 180,
+      speed: 35,
+      reward: 70,
+      stunDuration: 2000,  // Durée du stun en ms
+      maxStuns: 2          // Nombre max de tours à stun
+    },
+    INVISIBLE: {
+      id: 'invisible',
+      name: 'Fantôme',
+      cost: 250,
+      health: 120,
+      speed: 45,
+      reward: 90,
+      isInvisible: true    // Invisible, seules les tours avec true_sight peuvent l'attaquer
+    }
+  },
+
+  // Compétences des tours
+  TOWER_ABILITIES: {
+    TRUE_SIGHT: {
+      id: 'true_sight',
+      name: 'Vision Véritable',
+      description: 'Peut voir et attaquer les monstres invisibles',
+      cost: 150,
+      icon: '👁️'
+    },
+    FIRE: {
+      id: 'fire',
+      name: 'Flèches Enflammées',
+      description: 'Inflige 2% HP max/sec pendant 3s',
+      cost: 200,
+      duration: 3000,
+      damagePercent: 0.02,
+      icon: '🔥'
+    },
+    FREEZE: {
+      id: 'freeze',
+      name: 'Gel',
+      description: 'Ralentit de 50% pendant 2s',
+      cost: 180,
+      duration: 2000,
+      slowPercent: 0.5,
+      icon: '❄️'
+    },
+    POISON: {
+      id: 'poison',
+      name: 'Poison',
+      description: 'Inflige 2% HP max/sec pendant 4s',
+      cost: 220,
+      duration: 4000,
+      damagePercent: 0.02,
+      icon: '☠️'
     }
   },
 
@@ -174,12 +275,14 @@ module.exports = {
     // Actions du jeu
     PLACE_TOWER: 'placeTower',
     UPGRADE_TOWER: 'upgradeTower',
+    MOVE_TOWER: 'moveTower',
     SEND_MONSTER: 'sendMonster',
     MONSTER_SENT: 'monsterSent',
     MONSTER_KILLED: 'monsterKilled',
     MONSTER_PASSED: 'monsterPassed',
     TOWER_PLACED: 'towerPlaced',
     TOWER_UPGRADED: 'towerUpgraded',
+    TOWER_MOVED: 'towerMoved',
     MONEY_UPDATE: 'moneyUpdate',
     PLAYER_LOST: 'playerLost'
   }

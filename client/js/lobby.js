@@ -13,12 +13,13 @@ function initSocket() {
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5
+    reconnectionAttempts: 5,
+    withCredentials: true // Important pour envoyer les cookies
   });
 
   socket.on('connect', () => {
     console.log('Connecté au serveur');
-    // Pas besoin d'envoyer le token, il est dans le cookie
+    // Envoyer immédiatement la demande d'authentification
     socket.emit(CONSTANTS.SOCKET_EVENTS.LOGIN, {});
   });
 
@@ -33,6 +34,14 @@ function initSocket() {
 
   socket.on(CONSTANTS.SOCKET_EVENTS.AUTH_SUCCESS, (data) => {
     console.log('Authentifié:', data.username);
+  });
+  
+  socket.on(CONSTANTS.SOCKET_EVENTS.AUTH_ERROR, (data) => {
+    console.error('Erreur d\'authentification:', data.message);
+    showLobbyError('Erreur d\'authentification. Veuillez vous reconnecter.');
+    setTimeout(() => {
+      logout();
+    }, 2000);
   });
 
   socket.on(CONSTANTS.SOCKET_EVENTS.ROOM_CREATED, (data) => {
@@ -92,9 +101,13 @@ function initSocket() {
         startingMoney: data.gameSettings.startingMoney || 500,
         maxHealth: data.gameSettings.maxHealth || 20,
         monsterIntensity: data.gameSettings.monsterIntensity || 1.0,
-        rewardMultiplier: data.gameSettings.rewardMultiplier || 1.0
+        rewardMultiplier: data.gameSettings.rewardMultiplier || 1.0,
+        spawnSpeed: data.gameSettings.spawnSpeed || 'normal'
       };
       playerMoney = gameSettings.startingMoney;
+      
+      // Appliquer maxHealth à CONSTANTS
+      CONSTANTS.GAME.MONSTER_PASS_LIMIT = gameSettings.maxHealth;
     }
     
     showScreen('game-screen');
@@ -153,13 +166,15 @@ function startGame() {
   const maxHealth = parseInt(document.getElementById('max-health').value) || 20;
   const monsterIntensity = parseFloat(document.getElementById('monster-intensity').value) || 1.0;
   const rewardMultiplier = parseFloat(document.getElementById('reward-multiplier').value) || 1.0;
+  const spawnSpeed = document.getElementById('spawn-speed').value || 'normal';
   
   socket.emit(CONSTANTS.SOCKET_EVENTS.START_GAME, {
     gameSettings: {
       startingMoney,
       maxHealth,
       monsterIntensity,
-      rewardMultiplier
+      rewardMultiplier,
+      spawnSpeed
     }
   });
 }

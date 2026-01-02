@@ -122,7 +122,9 @@ class GameRoom {
     if (!player || !player.isAlive) return false;
 
     player.health++;
-    if (player.health >= 20) {
+    // Utiliser maxHealth du joueur ou des gameSettings, sinon valeur par défaut de 20
+    const maxHealth = player.maxHealth || (this.gameSettings && this.gameSettings.maxHealth) || 20;
+    if (player.health >= maxHealth) {
       player.isAlive = false;
       return true; // Player lost
     }

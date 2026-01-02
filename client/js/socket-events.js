@@ -3,6 +3,7 @@ function setupGameEvents() {
   socket.on(CONSTANTS.SOCKET_EVENTS.TOWER_PLACED, (data) => {
     playerMoney = data.money;
     addTowerToScene(data.tower);
+    occupyCell(data.tower.x, data.tower.y);
     updateUI();
   });
 
@@ -27,6 +28,10 @@ function setupGameEvents() {
     if (playerIdx !== -1) {
       playersStats[playerIdx].isAlive = false;
     }
+    
+    // Mettre à jour la liste des joueurs cibles pour retirer le joueur mort
+    updateTargetPlayers(playersStats);
+    
     updateUI();
   });
 
@@ -80,6 +85,14 @@ function setupGameEvents() {
         tower.rangeCircle.setRadius(tower.range);
       }
       
+      // Rafraîchir le menu de la tour si elle est sélectionnée
+      if (selectedTower && selectedTower.x === tower.x && selectedTower.y === tower.y) {
+        // Mettre à jour selectedTower avec les nouvelles valeurs
+        selectedTower = tower;
+        // Rafraîchir l'affichage du menu
+        openTowerMenu(tower, tower.sprite);
+      }
+      
       showToast(`Tour améliorée au niveau ${tower.level} !`, 'success');
     } else {
       console.warn(`⚠️ Tour non trouvée à (${data.tower.x}, ${data.tower.y})`, {
@@ -90,11 +103,41 @@ function setupGameEvents() {
     updateUI();
   });
 
+  socket.on('TOWER_MOVED', (data) => {
+    playerMoney = data.money;
+    
+    const tower = towers[data.towerId];
+    if (tower) {
+      // Libérer l'ancienne case
+      freeCell(tower.x, tower.y);
+      
+      // Mettre à jour la position
+      tower.x = data.x;
+      tower.y = data.y;
+      
+      // Occuper la nouvelle case
+      occupyCell(data.x, data.y);
+      
+      // Déplacer le sprite et le cercle de portée
+      if (tower.sprite) {
+        tower.sprite.setPosition(data.x, data.y);
+      }
+      if (tower.rangeCircle) {
+        tower.rangeCircle.setPosition(data.x, data.y);
+      }
+      
+      showToast('✅ Tour déplacée !', 'success');
+    }
+    
+    updateUI();
+  });
+
   socket.on('TOWER_SOLD', (data) => {
     playerMoney = data.money;
     const towerIndex = towers.findIndex(t => t.x === data.x && t.y === data.y);
     if (towerIndex !== -1) {
       const tower = towers[towerIndex];
+      freeCell(tower.x, tower.y);
       if (tower.sprite) tower.sprite.destroy();
       if (tower.rangeCircle) tower.rangeCircle.destroy();
       towers.splice(towerIndex, 1);

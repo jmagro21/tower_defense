@@ -148,7 +148,7 @@ module.exports = (io) => {
 
       // Appliquer les paramètres de configuration si fournis
       if (data.gameSettings) {
-        const { startingMoney, maxHealth, monsterIntensity, rewardMultiplier } = data.gameSettings;
+        const { startingMoney, maxHealth, monsterIntensity, rewardMultiplier, spawnSpeed } = data.gameSettings;
         
         // Appliquer les paramètres à chaque joueur
         room.players.forEach(player => {
@@ -162,8 +162,11 @@ module.exports = (io) => {
         
         // Stocker les paramètres globaux dans la room
         room.gameSettings = {
+          startingMoney: startingMoney || 500,
+          maxHealth: maxHealth || 20,
           monsterIntensity: monsterIntensity || 1.0,
-          rewardMultiplier: rewardMultiplier || 1.0
+          rewardMultiplier: rewardMultiplier || 1.0,
+          spawnSpeed: spawnSpeed || 'normal'
         };
       }
 
@@ -247,6 +250,32 @@ module.exports = (io) => {
       });
     });
 
+    // Déplacer une tour
+    socket.on('MOVE_TOWER', ({ towerId, x, y }) => {
+      const roomCode = playerRooms.get(socket.id);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+
+      const player = room.players.get(socket.id);
+      if (!player) return;
+
+      if (!player.towers || !player.towers[towerId]) return;
+
+      const moveCost = 25;
+      if (player.money < moveCost) return;
+
+      player.money -= moveCost;
+      const tower = player.towers[towerId];
+      tower.x = x;
+      tower.y = y;
+
+      socket.emit('TOWER_MOVED', {
+        towerId,
+        x, y,
+        money: player.money
+      });
+    });
+
     // Supprimer une tour
     socket.on('SELL_TOWER', ({ x, y }) => {
       const roomCode = playerRooms.get(socket.id);
@@ -316,11 +345,7 @@ module.exports = (io) => {
       room.addMoney(socket.id, reward);
       room.monsterKilledByPlayer(socket.id); // Décrémenter le compteur de monstres
       
-      // Incrémenter les kills du joueur
-      const player = room.players.get(socket.id);
-      if (player) {
-        player.kills = (player.kills || 0) + 1;
-      }
+      // Les kills sont déjà incrémentés dans room.addMoney()
       
       socket.emit(SOCKET_EVENTS.MONEY_UPDATE, {
         money: room.players.get(socket.id).money

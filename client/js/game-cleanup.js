@@ -16,6 +16,29 @@ function returnToLobby() {
   towers = [];
   monsters = [];
   path = [];
+  pathCells.clear();
+  towerCells.clear();
+  
+  // Nettoyer le preview de range et la tour en déplacement
+  if (towerRangePreview) {
+    towerRangePreview = null;
+  }
+  if (movingTower) {
+    movingTower = null;
+  }
+  
+  // Nettoyer les effets de stun
+  towers.forEach(tower => {
+    if (tower.stunEffect) {
+      tower.stunEffect = null;
+    }
+    if (tower.stunIcon) {
+      tower.stunIcon = null;
+    }
+    if (tower.goldAura) {
+      tower.goldAura = null;
+    }
+  });
   
   playerMoney = 500;
   playerHealth = 0;
@@ -26,6 +49,7 @@ function returnToLobby() {
   monsterLevel = 1;
   monsterHealthMultiplier = 1;
   rewardMultiplier = 1;
+  spawnInterval = 5;
   selectedTowerType = null;
   
   localStorage.removeItem('gameState');

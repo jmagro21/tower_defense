@@ -9,6 +9,7 @@ let rewardMultiplier = 1;
 let comboActive = false; // Combo de spawn en cours
 let comboCount = 0; // Nombre de monstres restants dans le combo
 let comboType = 'basic'; // Type de monstre du combo
+let spawnInterval = 5; // Intervalle en secondes pour ajouter des unités
 
 function updateGameTime() {
   gameTime++;
@@ -17,18 +18,30 @@ function updateGameTime() {
     showNotification('🎮 Les monstres arrivent !');
   }
   
-  // Augmentation continue du budget de spawn toutes les 5 secondes
-  if (gameTime % 5 === 0 && gameTime <= 30) {
+  // Appliquer les multiplicateurs selon les paramètres
+  if (gameSettings.spawnSpeed === 'slow') {
+    spawnInterval = 8;
+    maxSpawnUnits = Math.max(3, Math.floor(maxSpawnUnits * 0.6));
+  } else if (gameSettings.spawnSpeed === 'fast') {
+    spawnInterval = 3;
+    maxSpawnUnits = Math.floor(maxSpawnUnits * 1.5);
+  } else if (gameSettings.spawnSpeed === 'hard') {
+    spawnInterval = 2; // Très rapide
+    maxSpawnUnits = Math.floor(maxSpawnUnits * 3); // Triple les spawns
+  }
+  
+  // Augmentation continue du budget de spawn
+  if (gameTime % spawnInterval === 0 && gameTime <= 30) {
     spawnUnitCapacity += maxSpawnUnits;
-  } else if (gameTime > 30 && gameTime % 5 === 0) {
+  } else if (gameTime > 30 && gameTime % spawnInterval === 0) {
     // Après 30s, continue à ajouter des unités mais au taux du maxSpawnUnits actuel
     spawnUnitCapacity += maxSpawnUnits;
   }
   
   if (gameTime === 30) {
     maxSpawnUnits = 10; // Augmente après 30s
-    monsterHealthMultiplier = 1.2;
-    rewardMultiplier = 1.2;
+    monsterHealthMultiplier = 1.2 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 2;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 2 ! Les Tanks arrivent !');
@@ -36,17 +49,17 @@ function updateGameTime() {
   
   if (gameTime === 60) {
     maxSpawnUnits = 15; // Augmente après 60s
-    monsterHealthMultiplier = 1.4;
-    rewardMultiplier = 1.4;
+    monsterHealthMultiplier = 1.4 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 3;
     updateMonsterHPDisplay();
-    showNotification('🔥 Vague 3 ! Les Rapides arrivent !');
+    showNotification('🔥 Vague 3 ! Les Rapides et Diviseurs arrivent !');
   }
 
   if (gameTime === 90) {
     maxSpawnUnits = 20; // Augmente après 90s
-    monsterHealthMultiplier = 1.6;
-    rewardMultiplier = 1.6;
+    monsterHealthMultiplier = 1.6 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 4;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 4 ! Préparez-vous !');
@@ -54,8 +67,8 @@ function updateGameTime() {
   
   if (gameTime === 300) {
     maxSpawnUnits += 5;
-    monsterHealthMultiplier += 0.2;
-    rewardMultiplier += 0.2;
+    monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 10;
     updateMonsterHPDisplay();
     showNotification('💀 Manche 10 ! Les BOSS arrivent enfin !');
@@ -63,8 +76,8 @@ function updateGameTime() {
 
   if (gameTime > 90 && gameTime < 300 && gameTime % 30 === 0) {
     maxSpawnUnits += 2; // Augmentation plus faible avant les boss
-    monsterHealthMultiplier += 0.1;
-    rewardMultiplier += 0.1;
+    monsterHealthMultiplier += 0.1 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);
@@ -72,8 +85,8 @@ function updateGameTime() {
 
   if (gameTime > 300 && gameTime % 30 === 0) {
     maxSpawnUnits += 5; // Augmente plus rapidement après les boss
-    monsterHealthMultiplier += 0.2;
-    rewardMultiplier += 0.2;
+    monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
+    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);
@@ -88,14 +101,23 @@ function getAvailableMonsterTypes() {
     // 30-60s: BASIC + TANK
     return ['basic', 'basic', 'tank'];
   } else if (gameTime < 90) {
-    // 60-90s: BASIC + TANK + FAST
-    return ['basic', 'basic', 'tank', 'fast'];
+    // 60-90s: BASIC + TANK + FAST + SPLITTER
+    return ['basic', 'basic', 'tank', 'fast', 'splitter'];
+  } else if (gameTime < 120) {
+    // 90-120s: BASIC + TANK + FAST + SPLITTER + BUFFER
+    return ['basic', 'basic', 'tank', 'fast', 'splitter', 'buffer'];
+  } else if (gameTime < 180) {
+    // 120-180s: Tous sauf BOSS
+    return ['basic', 'basic', 'tank', 'fast', 'splitter', 'buffer', 'stunner'];
+  } else if (gameTime < 240) {
+    // 180-240s: Ajout de INVISIBLE
+    return ['basic', 'tank', 'fast', 'splitter', 'buffer', 'stunner', 'invisible'];
   } else if (gameTime < 300) {
-    // 90-300s (avant manche 10): Pas de BOSS, combo possible
-    return ['basic', 'basic', 'tank', 'fast'];
+    // 240-300s: Tous sauf BOSS
+    return ['basic', 'tank', 'fast', 'splitter', 'buffer', 'stunner', 'invisible'];
   } else {
-    // 300s+ (manche 10+): BASIC + TANK + FAST + BOSS
-    return ['basic', 'basic', 'tank', 'fast', 'boss'];
+    // 300s+ (manche 10+): Tous les types
+    return ['basic', 'tank', 'fast', 'splitter', 'buffer', 'stunner', 'invisible', 'boss'];
   }
 }
 
@@ -142,8 +164,12 @@ function autoSpawnMonster() {
     const cost = monsterData.spawnCost;
     
     if (cost <= spawnUnitCapacity) {
+      // Appliquer les bonus de recherche d'attaque
+      const attackBonuses = getAttackBonuses();
+      
       // On peut spawn ce monstre
-      monsterData.health = Math.floor(monsterData.health * monsterHealthMultiplier);
+      monsterData.health = Math.floor(monsterData.health * monsterHealthMultiplier * (1 + attackBonuses.healthBonus / 100));
+      monsterData.speed = Math.floor(monsterData.speed * (1 + attackBonuses.speedBonus / 100));
       monsterData.reward = Math.floor(monsterData.reward * rewardMultiplier);
       monsterData.level = monsterLevel;
       

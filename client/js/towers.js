@@ -2,13 +2,55 @@
 let selectedTowerType = null;
 let towers = [];
 let selectedTower = null;
+let towerRangePreview = null; // Cercle de preview pour la portée
+let movingTower = null; // Tour en cours de déplacement
+const MOVE_TOWER_COST = 25; // Coût pour déplacer une tour
+let towerClickHandled = false; // Drapeau pour éviter la fermeture immédiate du menu
 
 function selectTower(towerType) {
+  // Si la même tour est déjà sélectionnée, la désélectionner
+  if (selectedTowerType === towerType) {
+    deselectTower();
+    return;
+  }
+  
   selectedTowerType = towerType;
   document.querySelectorAll('.tower-btn').forEach(btn => {
     btn.classList.remove('selected');
   });
   event.target.closest('.tower-btn').classList.add('selected');
+  
+  // Nettoyer l'ancien cercle de preview s'il existe
+  if (towerRangePreview) {
+    towerRangePreview.destroy();
+    towerRangePreview = null;
+  }
+  
+  // Créer le cercle de preview si le jeu est actif
+  if (gameScene) {
+    const towerData = CONSTANTS.TOWER_TYPES[towerType.toUpperCase()];
+    if (towerData) {
+      towerRangePreview = gameScene.add.circle(0, 0, towerData.range, 0x00ff00, 0.15);
+      towerRangePreview.setStrokeStyle(2, 0x00ff00, 0.5);
+      towerRangePreview.setDepth(5);
+      towerRangePreview.setVisible(false);
+    }
+  }
+}
+
+function deselectTower() {
+  selectedTowerType = null;
+  
+  // Retirer la classe selected de tous les boutons
+  document.querySelectorAll('.tower-btn').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  
+  // Détruire le cercle de preview
+  if (towerRangePreview) {
+    towerRangePreview.destroy();
+    towerRangePreview = null;
+  }
 }
 
 function placeTower(x, y) {
@@ -28,8 +70,18 @@ function placeTower(x, y) {
     return;
   }
 
+  // Snap sur la grille
+  const snapped = snapToGrid(x, y);
+  x = snapped.x;
+  y = snapped.y;
+
   if (isOnPath(x, y)) {
     showToast('Vous ne pouvez pas placer une tour sur le chemin !', 'error');
+    return;
+  }
+  
+  if (isCellOccupied(x, y)) {
+    showToast('Une tour est déjà présente sur cette case !', 'warning');
     return;
   }
 
@@ -41,6 +93,12 @@ function placeTower(x, y) {
   document.querySelectorAll('.tower-btn').forEach(btn => {
     btn.classList.remove('selected');
   });
+  
+  // Détruire le cercle de preview
+  if (towerRangePreview) {
+    towerRangePreview.destroy();
+    towerRangePreview = null;
+  }
 }
 
 function addTowerToScene(towerData) {
@@ -48,10 +106,11 @@ function addTowerToScene(towerData) {
   const defenseBonuses = getDefenseBonuses();
   
   // Créer une copie des données de la tour pour ne pas modifier l'original
+  // Pour le fireRate : réduire le délai en fonction du bonus (ex: -10% de délai = tire plus vite)
   const enhancedTowerData = {
     ...towerData,
     damage: towerData.damage * (1 + defenseBonuses.damageBonus / 100),
-    fireRate: towerData.fireRate / (1 + defenseBonuses.attackSpeedBonus / 100)  // fireRate en ms, donc moins = plus rapide
+    fireRate: towerData.fireRate * (1 - defenseBonuses.attackSpeedBonus / 100)  // Réduire le délai = augmenter la vitesse
   };
   
   const container = gameScene.add.container(enhancedTowerData.x, enhancedTowerData.y);
@@ -81,6 +140,46 @@ function addTowerToScene(towerData) {
     const cannon2 = gameScene.add.rectangle(0, -8, 5, 12, 0xc0392b);
     const cannon3 = gameScene.add.rectangle(8, -5, 5, 12, 0xc0392b);
     towerGraphics = [base, tower, cannon1, cannon2, cannon3];
+  } else if (enhancedTowerData.id === 'gold') {
+    const base = gameScene.add.circle(0, 5, 18, 0xf39c12);
+    const tower = gameScene.add.circle(0, 0, 16, 0xffd700);
+    const gem1 = gameScene.add.circle(-6, -4, 4, 0xffeb3b);
+    const gem2 = gameScene.add.circle(6, -4, 4, 0xffeb3b);
+    const gem3 = gameScene.add.circle(0, -10, 5, 0xffc107);
+    const coin1 = gameScene.add.circle(-8, 2, 3, 0xf1c40f);
+    const coin2 = gameScene.add.circle(8, 2, 3, 0xf1c40f);
+    towerGraphics = [base, tower, coin1, coin2, gem1, gem2, gem3];
+    
+    // Animation de brillance
+    gameScene.tweens.add({
+      targets: [gem1, gem2, gem3],
+      alpha: 0.5,
+      scale: 1.2,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1
+    });
+  } else if (enhancedTowerData.id === 'research') {
+    const base = gameScene.add.circle(0, 6, 18, 0x34495e);
+    const tower = gameScene.add.rectangle(0, 0, 24, 28, 0x3498db);
+    const window1 = gameScene.add.rectangle(-6, -6, 8, 8, 0x74b9ff);
+    const window2 = gameScene.add.rectangle(6, -6, 8, 8, 0x74b9ff);
+    const roof = gameScene.add.polygon(0, -14, [
+      -14, 0, 0, -8, 14, 0
+    ], 0x2c3e50);
+    const atom1 = gameScene.add.circle(-4, 8, 3, 0x00b894);
+    const atom2 = gameScene.add.circle(4, 8, 3, 0x00b894);
+    const beam = gameScene.add.rectangle(0, -18, 2, 6, 0x0984e3);
+    towerGraphics = [base, tower, roof, window1, window2, atom1, atom2, beam];
+    
+    // Animation des atomes
+    gameScene.tweens.add({
+      targets: [atom1, atom2, beam],
+      alpha: 0.3,
+      duration: 800,
+      yoyo: true,
+      repeat: -1
+    });
   } else {
     // Par défaut, créer une tour basique simple
     const base = gameScene.add.circle(0, 5, 18, 0x808080);
@@ -117,22 +216,83 @@ function addTowerToScene(towerData) {
     container.setScale(1);
   });
 
-  container.on('pointerdown', () => {
-    openTowerMenu(enhancedTowerData, container);
+  container.on('pointerdown', (pointer) => {
+    // Empêcher la propagation pour ne pas déclencher le clic sur le canvas
+    pointer.event.stopPropagation();
+    // Marquer que le clic sur une tour a été traité
+    towerClickHandled = true;
+    openTowerMenu(towerData, container);
+    // Réinitialiser le drapeau après un court délai
+    setTimeout(() => { towerClickHandled = false; }, 50);
   });
+
+  // Ajouter l'aura dorée pour les tours GOLD
+  let goldAura = null;
+  if (enhancedTowerData.id === 'gold') {
+    const goldRadius = CONSTANTS.TOWER_TYPES.GOLD.goldRadius || 150;
+    goldAura = gameScene.add.circle(enhancedTowerData.x, enhancedTowerData.y, goldRadius, 0xffd700, 0.1);
+    goldAura.setStrokeStyle(3, 0xffaa00, 0.5);
+    goldAura.setDepth(0); // En arrière-plan
+    
+    // Animation de pulsation
+    gameScene.tweens.add({
+      targets: goldAura,
+      alpha: 0.2,
+      scale: 1.05,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1
+    });
+  }
+
+  // Ajouter l'aura de recherche pour les tours RESEARCH
+  let researchAura = null;
+  if (enhancedTowerData.id === 'research') {
+    const researchRadius = CONSTANTS.TOWER_TYPES.RESEARCH.auraRadius || 150;
+    researchAura = gameScene.add.circle(enhancedTowerData.x, enhancedTowerData.y, researchRadius, 0x00ff88, 0.08);
+    researchAura.setStrokeStyle(2, 0x00cc66, 0.4);
+    researchAura.setDepth(0); // En arrière-plan
+    
+    // Animation de pulsation subtile
+    gameScene.tweens.add({
+      targets: researchAura,
+      alpha: 0.15,
+      scale: 1.03,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1
+    });
+  }
 
   towers.push({
     ...enhancedTowerData,
     sprite: container,
     rangeCircle: rangeCircle,
+    goldAura: goldAura,
+    researchAura: researchAura,
+    targetMode: 'closest', // Mode de ciblage par défaut
     levelText: levelText,
-    cooldown: 0
+    cooldown: 0,
+    isStunned: false,
+    stunEffect: null,
+    stunIcon: null,
+    stunEndTime: 0,
+    abilities: []  // Liste des compétences achetées
   });
 }
 
 function openTowerMenu(towerData, container) {
   selectedTower = towers.find(t => t.sprite === container);
-  if (!selectedTower) return;
+  
+  // Si on ne trouve pas par sprite, utiliser les données passées
+  if (!selectedTower) {
+    selectedTower = {
+      ...towerData,
+      sprite: container
+    };
+  }
+  
+  if (!selectedTower || !selectedTower.id) return;
   
   const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
   if (!towerConfig) return;
@@ -153,6 +313,7 @@ function openTowerMenu(towerData, container) {
   if (selectedTower.id === 'basic') {
     // Basique: dégats et cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+    // fireRateUpgrade est négatif (-150), les bonus amplifient cette réduction
     newFireRate = currentFireRate + (towerConfig.fireRateUpgrade || 0) * (1 + defenseBonuses.attackSpeedBonus / 100);
   } else if (selectedTower.id === 'sniper') {
     // Sniper: niveau 1-5 = range et dégats, niveau 5+ = attaque et vitesse
@@ -162,11 +323,13 @@ function openTowerMenu(towerData, container) {
       newFireRate = currentFireRate;
     } else {
       newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+      // fireRateUpgrade est négatif (-300), les bonus amplifient cette réduction
       newFireRate = currentFireRate + (towerConfig.fireRateUpgrade || 0) * (1 + defenseBonuses.attackSpeedBonus / 100);
     }
   } else if (selectedTower.id === 'rapid') {
     // Rapide: uniquement attaque et vitesse (vitesse augmente plus)
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+    // fireRateUpgrade est négatif (-75), on amplifie x1.5 et avec les bonus
     newFireRate = currentFireRate + ((towerConfig.fireRateUpgrade || 0) * 1.5) * (1 + defenseBonuses.attackSpeedBonus / 100);
   }
   
@@ -184,31 +347,207 @@ function openTowerMenu(towerData, container) {
   // Coût d'amélioration réduit par la recherche
   const upgradeCost = Math.floor(towerConfig.upgradeCost * (1 - defenseBonuses.upgradeCostReduction / 100));
   
+  console.log('Mise à jour du DOM...');
+  
   // Mise à jour du menu
-  document.getElementById('tower-menu-title').textContent = `${towerConfig.name} - Niveau ${selectedTower.level || 1}`;
-  document.getElementById('tower-menu-level').textContent = selectedTower.level || 1;
-  document.getElementById('tower-menu-damage-current').textContent = currentDamage.toFixed(1);
-  document.getElementById('tower-menu-damage-next').textContent = newDamage.toFixed(1);
-  document.getElementById('tower-menu-firerate-current').textContent = `${fireRateMultiplier}x`;
-  document.getElementById('tower-menu-firerate-next').textContent = `${newFireRateMultiplier}x`;
-  document.getElementById('tower-upgrade-cost').textContent = `${upgradeCost} 💰`;
+  const menuTitle = document.getElementById('tower-menu-title');
+  if (menuTitle) menuTitle.textContent = `${towerConfig.name} - Niveau ${selectedTower.level || 1}`;
+  
+  const menuLevel = document.getElementById('tower-menu-level');
+  if (menuLevel) menuLevel.textContent = selectedTower.level || 1;
+  
+  const dmgCurrent = document.getElementById('tower-menu-damage-current');
+  if (dmgCurrent) dmgCurrent.textContent = currentDamage.toFixed(1);
+  
+  const dmgNext = document.getElementById('tower-menu-damage-next');
+  if (dmgNext) dmgNext.textContent = newDamage.toFixed(1);
+  
+  const frCurrent = document.getElementById('tower-menu-firerate-current');
+  if (frCurrent) frCurrent.textContent = `${fireRateMultiplier}x`;
+  
+  const frNext = document.getElementById('tower-menu-firerate-next');
+  if (frNext) frNext.textContent = `${newFireRateMultiplier}x`;
+  
+  const upgradeCostElem = document.getElementById('tower-upgrade-cost');
+  if (upgradeCostElem) upgradeCostElem.textContent = `${upgradeCost} 💰`;
+  
+  console.log('DOM mis à jour, affichage des compétences et ciblage...');
   
   // Afficher la portée si c'est un sniper
   const rangeRow = document.getElementById('tower-menu-range-row');
-  if (selectedTower.id === 'sniper') {
-    if (selectedTower.level < 5) {
-      rangeRow.style.display = 'block';
-      document.getElementById('tower-menu-range-current').textContent = selectedTower.range;
-      document.getElementById('tower-menu-range-next').textContent = selectedTower.range + 50;
+  if (rangeRow) {
+    if (selectedTower.id === 'sniper') {
+      if (selectedTower.level < 5) {
+        rangeRow.style.display = 'block';
+        const rngCurrent = document.getElementById('tower-menu-range-current');
+        const rngNext = document.getElementById('tower-menu-range-next');
+        if (rngCurrent) rngCurrent.textContent = selectedTower.range;
+        if (rngNext) rngNext.textContent = selectedTower.range + 50;
+      } else {
+        rangeRow.style.display = 'none';
+      }
     } else {
       rangeRow.style.display = 'none';
     }
-  } else {
-    rangeRow.style.display = 'none';
   }
   
+  // Afficher la cadence ou le bonus recherche/or selon le type de tour
+  const fireRateRow = document.getElementById('tower-menu-firerate-row');
+  const researchRow = document.getElementById('tower-menu-research-row');
+  const goldRow = document.getElementById('tower-menu-gold-row');
+  
+  if (selectedTower.id === 'research') {
+    // Tour Laboratoire: cacher la cadence, afficher le bonus recherche
+    if (fireRateRow) fireRateRow.style.display = 'none';
+    if (researchRow) {
+      researchRow.style.display = 'flex';
+      const currentLevel = selectedTower.level || 1;
+      const currentBonus = 1 + Math.floor(currentLevel / 5);
+      const nextBonus = 1 + Math.floor((currentLevel + 1) / 5);
+      
+      const researchCurrent = document.getElementById('tower-menu-research-current');
+      const researchNext = document.getElementById('tower-menu-research-next');
+      if (researchCurrent) researchCurrent.textContent = `+${currentBonus}`;
+      if (researchNext) researchNext.textContent = `+${nextBonus}`;
+    }
+    if (goldRow) goldRow.style.display = 'none';
+  } else if (selectedTower.id === 'gold') {
+    // Tour Dorée: cacher la cadence, afficher le bonus or
+    if (fireRateRow) fireRateRow.style.display = 'none';
+    if (researchRow) researchRow.style.display = 'none';
+    if (goldRow) {
+      goldRow.style.display = 'flex';
+      const currentLevel = selectedTower.level || 1;
+      const currentBonus = 2 + (Math.floor(currentLevel / 5) * 0.2);
+      const nextBonus = 2 + (Math.floor((currentLevel + 1) / 5) * 0.2);
+      
+      const goldCurrent = document.getElementById('tower-menu-gold-current');
+      const goldNext = document.getElementById('tower-menu-gold-next');
+      if (goldCurrent) goldCurrent.textContent = `x${currentBonus.toFixed(1)}`;
+      if (goldNext) goldNext.textContent = `x${nextBonus.toFixed(1)}`;
+    }
+  } else {
+    // Autres tours: afficher la cadence, cacher le bonus recherche et or
+    if (fireRateRow) fireRateRow.style.display = 'flex';
+    if (researchRow) researchRow.style.display = 'none';
+    if (goldRow) goldRow.style.display = 'none';
+  }
+  
+  console.log('Avant updateAbilitiesDisplay');
+  
+  // Afficher les compétences disponibles
+  try {
+    updateAbilitiesDisplay();
+  } catch(e) {
+    console.error('Erreur updateAbilitiesDisplay:', e);
+  }
+  
+  // Mettre à jour l'affichage du mode de ciblage
+  try {
+    updateTargetModeDisplay();
+  } catch(e) {
+    console.error('Erreur updateTargetModeDisplay:', e);
+  }
+  
+  // Afficher le menu en dernier
   const menu = document.getElementById('tower-menu');
-  menu.classList.remove('hidden');
+  if (menu) {
+    menu.classList.remove('hidden');
+  }
+}
+
+function updateAbilitiesDisplay() {
+  if (!selectedTower) return;
+  
+  const abilitiesList = document.getElementById('tower-abilities-list');
+  if (!abilitiesList) {
+    console.warn('tower-abilities-list element not found');
+    return;
+  }
+  
+  abilitiesList.innerHTML = '';
+  
+  const abilities = CONSTANTS.TOWER_ABILITIES ? Object.values(CONSTANTS.TOWER_ABILITIES) : [];
+  if (abilities.length === 0) {
+    console.warn('Aucune compétence trouvée dans CONSTANTS.TOWER_ABILITIES');
+    return;
+  }
+  
+  abilities.forEach(ability => {
+    const hasAbility = selectedTower.abilities && selectedTower.abilities.includes(ability.id);
+    
+    const abilityBtn = document.createElement('button');
+    abilityBtn.className = 'ability-btn';
+    if (hasAbility) {
+      abilityBtn.classList.add('purchased');
+      abilityBtn.disabled = true;
+    }
+    
+    abilityBtn.innerHTML = `
+      <span class="ability-icon">${ability.icon}</span>
+      <div class="ability-info">
+        <span class="ability-name">${ability.name}</span>
+        <span class="ability-desc">${ability.description}</span>
+      </div>
+      <span class="ability-cost">${hasAbility ? '✓ Acheté' : ability.cost + ' 💰'}</span>
+    `;
+    
+    if (!hasAbility) {
+      abilityBtn.onclick = () => buyAbility(ability.id);
+    }
+    
+    abilitiesList.appendChild(abilityBtn);
+  });
+}
+
+function buyAbility(abilityId) {
+  if (!selectedTower) return;
+  
+  const ability = CONSTANTS.TOWER_ABILITIES[abilityId.toUpperCase()];
+  if (!ability) return;
+  
+  if (playerMoney < ability.cost) {
+    showToast('Pas assez d\'argent !', 'warning');
+    return;
+  }
+  
+  // Acheter la compétence
+  playerMoney -= ability.cost;
+  
+  if (!selectedTower.abilities) {
+    selectedTower.abilities = [];
+  }
+  selectedTower.abilities.push(ability.id);
+  
+  // Ajouter un indicateur visuel sur la tour
+  addAbilityIndicator(selectedTower, ability);
+  
+  updateUI();
+  updateAbilitiesDisplay();
+  showToast(`${ability.icon} ${ability.name} acheté !`, 'success');
+}
+
+function addAbilityIndicator(tower, ability) {
+  if (!tower.sprite || !gameScene) return;
+  
+  // Créer une icône au-dessus de la tour
+  const abilityIcon = gameScene.add.text(
+    tower.x + (tower.abilities.length - 1) * 15 - 15,
+    tower.y - 45,
+    ability.icon,
+    {
+      fontSize: '14px',
+      stroke: '#000',
+      strokeThickness: 2
+    }
+  );
+  abilityIcon.setOrigin(0.5);
+  abilityIcon.setDepth(12);
+  
+  if (!tower.abilityIcons) {
+    tower.abilityIcons = [];
+  }
+  tower.abilityIcons.push(abilityIcon);
 }
 
 function closeTowerMenu() {
@@ -216,11 +555,82 @@ function closeTowerMenu() {
   selectedTower = null;
 }
 
+function startMovingTower() {
+  if (!selectedTower) return;
+  
+  if (playerMoney < MOVE_TOWER_COST) {
+    showToast('Pas assez d\'argent pour déplacer la tour !', 'warning');
+    return;
+  }
+  
+  // Stocker la tour à déplacer
+  movingTower = selectedTower;
+  
+  // Créer un cercle de preview de portée
+  if (gameScene && !towerRangePreview) {
+    towerRangePreview = gameScene.add.circle(0, 0, movingTower.range, 0xffff00, 0.15);
+    towerRangePreview.setStrokeStyle(2, 0xffff00, 0.5);
+    towerRangePreview.setDepth(5);
+    towerRangePreview.setVisible(false);
+  }
+  
+  // Rendre la tour semi-transparente
+  movingTower.sprite.setAlpha(0.5);
+  
+  closeTowerMenu();
+  showToast('👉 Cliquez sur un emplacement pour déplacer la tour', 'info');
+}
+
+function moveTower(x, y) {
+  if (!movingTower) return;
+  
+  // Snap sur la grille
+  const snapped = snapToGrid(x, y);
+  x = snapped.x;
+  y = snapped.y;
+  
+  // Vérifier si la nouvelle position est valide
+  if (isOnPath(x, y)) {
+    showToast('Vous ne pouvez pas placer une tour sur le chemin !', 'error');
+    return;
+  }
+  
+  // Vérifier si la case est occupée (sauf par la tour qu'on déplace)
+  if (isCellOccupied(x, y) && !(movingTower.x === x && movingTower.y === y)) {
+    showToast('Une tour est déjà présente sur cette case !', 'warning');
+    return;
+  }
+  
+  // Envoyer la demande de déplacement au serveur
+  socket.emit('MOVE_TOWER', {
+    oldX: movingTower.x,
+    oldY: movingTower.y,
+    newX: x,
+    newY: y
+  });
+  
+  // Restaurer l'opacité de la tour
+  movingTower.sprite.setAlpha(1);
+  
+  // Nettoyer le cercle de preview
+  if (towerRangePreview) {
+    towerRangePreview.destroy();
+    towerRangePreview = null;
+  }
+  
+  movingTower = null;
+}
+
 function upgradeTower() {
   if (!selectedTower) return;
   
   const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
-  const upgradeCost = towerConfig.upgradeCost;
+  if (!towerConfig) return;
+  
+  const defenseBonuses = getDefenseBonuses();
+  
+  // Coût d'amélioration réduit par la recherche
+  const upgradeCost = Math.floor((towerConfig.upgradeCost || 50) * (1 - defenseBonuses.upgradeCostReduction / 100));
   
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');
@@ -233,7 +643,7 @@ function upgradeTower() {
     y: selectedTower.y
   });
   
-  closeTowerMenu();
+  // Ne pas fermer le menu, il sera mis à jour par l'événement TOWER_UPGRADED
 }
 
 function sellTower() {
@@ -246,6 +656,42 @@ function sellTower() {
   
   closeTowerMenu();
 }
+
+// Changer le mode de ciblage d'une tour
+function setTargetMode(mode) {
+  if (!selectedTower) return;
+  
+  selectedTower.targetMode = mode;
+  updateTargetModeDisplay();
+  
+  // Feedback visuel
+  const modeName = {
+    'closest': 'Plus proche',
+    'weakest': 'Plus faible HP',
+    'fastest': 'Plus rapide',
+    'nearest_end': 'Plus près de la fin'
+  }[mode];
+  
+  showToast(`🎯 Ciblage: ${modeName}`, 'info');
+}
+
+// Mettre à jour l'affichage du mode de ciblage
+function updateTargetModeDisplay() {
+  if (!selectedTower) return;
+  
+  const currentMode = selectedTower.targetMode || 'closest';
+  const buttons = document.querySelectorAll('.targeting-btn');
+  
+  buttons.forEach(btn => {
+    const mode = btn.getAttribute('data-mode');
+    if (mode === currentMode) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
 // Mettre à jour les dégâts affichés dans le panneau de sélection des tours
 function updateTowerShopDisplay() {
   const defenseBonuses = getDefenseBonuses();
@@ -264,4 +710,14 @@ function updateTowerShopDisplay() {
   const rapidDamage = Math.floor(CONSTANTS.TOWER_TYPES.RAPID.damage * (1 + defenseBonuses.damageBonus / 100));
   const rapidElement = document.getElementById('tower-rapid-damage');
   if (rapidElement) rapidElement.textContent = `${rapidDamage} dégâts`;
+  
+  // Mettre à jour Gold
+  const goldDamage = Math.floor(CONSTANTS.TOWER_TYPES.GOLD.damage * (1 + defenseBonuses.damageBonus / 100));
+  const goldElement = document.getElementById('tower-gold-damage');
+  if (goldElement) goldElement.textContent = `${goldDamage} dégâts`;
+  
+  // Mettre à jour Research
+  const researchDamage = Math.floor(CONSTANTS.TOWER_TYPES.RESEARCH.damage * (1 + defenseBonuses.damageBonus / 100));
+  const researchElement = document.getElementById('tower-research-damage');
+  if (researchElement) researchElement.textContent = `${researchDamage} dégâts`;
 }

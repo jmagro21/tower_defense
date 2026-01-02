@@ -20,22 +20,24 @@ window.addEventListener('DOMContentLoaded', () => {
     if (data.user) {
       currentUser = data.user;
       localStorage.setItem('currentUser', JSON.stringify(data.user));
-    }
-    
-    const gameState = localStorage.getItem('gameState');
-    const currentRoom = localStorage.getItem('currentRoom');
-    
-    if (gameState === 'playing' && currentRoom) {
-      // Réinitialiser vers le lobby si la partie est terminée
-      localStorage.removeItem('gameState');
-      localStorage.removeItem('currentRoom');
-      showScreen('lobby-screen');
+      
+      const gameState = localStorage.getItem('gameState');
+      const currentRoom = localStorage.getItem('currentRoom');
+      
+      if (gameState === 'playing' && currentRoom) {
+        // Réinitialiser vers le lobby si la partie est terminée
+        localStorage.removeItem('gameState');
+        localStorage.removeItem('currentRoom');
+        showScreen('lobby-screen');
+      } else {
+        showScreen('lobby-screen');
+      }
+      
+      updateUserDisplay();
+      initSocket();
     } else {
-      showScreen('lobby-screen');
+      throw new Error('Utilisateur non trouvé');
     }
-    
-    updateUserDisplay();
-    initSocket();
   }).catch(() => {
     localStorage.clear();
     currentUser = null;
@@ -67,4 +69,32 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('room-code-input').addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase();
   });
+
+  // Empêcher les clics sur le menu d'amélioration de passer à travers
+  const towerMenu = document.getElementById('tower-menu');
+  if (towerMenu) {
+    towerMenu.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    towerMenu.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+    });
+    towerMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // Même chose pour le modal de recherche
+  const researchModal = document.getElementById('research-modal');
+  if (researchModal) {
+    researchModal.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+    researchModal.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+    });
+    researchModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
 });

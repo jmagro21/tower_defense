@@ -70,8 +70,48 @@ function create() {
   drawGrid();
 
   this.input.on('pointerdown', (pointer) => {
+    // Vérifier si un menu/modal est ouvert (ne pas traiter les clics)
+    const towerMenu = document.getElementById('tower-menu');
+    const researchModal = document.getElementById('research-modal');
+    const isTowerMenuOpen = towerMenu && !towerMenu.classList.contains('hidden');
+    const isResearchModalOpen = researchModal && !researchModal.classList.contains('hidden');
+    
+    // Si un menu est ouvert, ignorer les clics sur le canvas
+    if (isTowerMenuOpen || isResearchModalOpen) {
+      return;
+    }
+    
+    // Annuler le déplacement avec clic droit
+    if (pointer.rightButtonDown() && movingTower) {
+      movingTower.sprite.setAlpha(1);
+      if (towerRangePreview) {
+        towerRangePreview.destroy();
+        towerRangePreview = null;
+      }
+      movingTower = null;
+      showToast('❌ Déplacement annulé', 'info');
+      return;
+    }
+    
+    // Si le clic sur une tour a déjà été traité, ne pas continuer
+    if (towerClickHandled) {
+      return;
+    }
+    
+    // Si on est en mode placement de tour
     if (selectedTowerType) {
       placeTower(pointer.x, pointer.y);
+    }
+    // Si on est en mode déplacement de tour
+    else if (movingTower) {
+      moveTower(pointer.x, pointer.y);
+    }
+    // Sinon, vérifier si on clique sur un espace vide (pas sur une tour)
+    // Pour désélectionner la tour active
+    else if (selectedTower) {
+      // Le clic sur une tour est géré par son propre événement 'pointerdown'
+      // Si on arrive ici, c'est qu'on a cliqué à côté, donc on désélectionne
+      closeTowerMenu();
     }
   });
 
@@ -120,7 +160,7 @@ function create() {
   });
 
   this.time.addEvent({
-    delay: 5000,
+    delay: 10000, // Réduit à 10 secondes car les projectiles sont nettoyés automatiquement maintenant
     callback: () => {
       if (gameScene && gameScene.tweens) {
         gameScene.tweens.killAll();
@@ -131,6 +171,17 @@ function create() {
 }
 
 function update(time, delta) {
+  // Mettre à jour la position du cercle de preview
+  if (towerRangePreview && (selectedTowerType || movingTower)) {
+    const pointer = this.input.activePointer;
+    // Snap sur la grille pour le preview
+    const snapped = snapToGrid(pointer.x, pointer.y);
+    towerRangePreview.setPosition(snapped.x, snapped.y);
+    towerRangePreview.setVisible(true);
+  } else if (towerRangePreview) {
+    towerRangePreview.setVisible(false);
+  }
+  
   // Tir des tours
   towers.forEach(tower => {
     tower.cooldown--;
@@ -158,6 +209,12 @@ function update(time, delta) {
       monsters.splice(i, 1);
     }
   }
+  
+  // Mise à jour des buffs des monstres
+  updateMonsterBuffs();
+  
+  // Mise à jour de l'aura de recherche (ralentissement + assist)
+  updateResearchAura();
 }
 
 

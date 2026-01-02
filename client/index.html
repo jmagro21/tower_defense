@@ -4,11 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tower Defense Multijoueur</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏰</text></svg>">
   <script src="/libs/phaser.min.js"></script>
   <script src="/libs/socket.io.min.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Conteneur pour les notifications toast -->
+  <div id="toast-container" class="toast-container"></div>
+  
+  <!-- Musique de fond -->
+  <audio id="background-music" preload="auto">
+    <source src="/audio/main.wav" type="audio/wav">
+  </audio>
+  
   <script>
     // Variable globale pour la map sélectionnée
     let selectedMap = 'standard';
@@ -44,6 +53,12 @@
           <span id="username-display"></span>
           <button onclick="logout()">Déconnexion</button>
         </div>
+        
+        <!-- Contrôles de musique -->
+        <div class="music-controls">
+          <button id="music-mute-btn" onclick="toggleMusicMute()" class="btn-music">🔊 Couper</button>
+        </div>
+        
         <div class="lobby-buttons">
           <button onclick="createRoom()" class="btn-primary">Créer un salon</button>
           <div class="join-room">
@@ -98,6 +113,15 @@
                 <option value="2.0">Doublé (+100%)</option>
               </select>
             </div>
+            <div class="setting-item">
+              <label for="spawn-speed">⚡ Cadence de spawn:</label>
+              <select id="spawn-speed">
+                <option value="slow">Lente (Casual)</option>
+                <option value="normal" selected>Normale</option>
+                <option value="fast">Rapide</option>
+                <option value="hard">Hard (Très rapide)</option>
+              </select>
+            </div>
           </div>
         </div>
         
@@ -129,6 +153,7 @@
         <!-- Panneau gauche: Tours -->
         <div class="game-panel left-panel">
           <h3>🏗️ Tours</h3>
+          <div id="tower-count" style="text-align: center; margin: 5px 0; font-size: 14px; color: #888;">0 / 20</div>
           <div class="tower-shop">
             <button class="tower-btn" onclick="selectTower('basic')" title="Tour Basique - 100💰">
               <div class="tower-icon">🔷</div>
@@ -148,11 +173,29 @@
               <div class="tower-stats" id="tower-rapid-damage">5 dégâts</div>
               <div class="cost">💰 150</div>
             </button>
+            <button class="tower-btn" onclick="selectTower('gold')" title="Tour Dorée - 250💰">
+              <div class="tower-icon">💰</div>
+              <div class="tower-name">Dorée</div>
+              <div class="tower-stats" id="tower-gold-damage">8 dégâts</div>
+              <div class="cost">💰 250</div>
+            </button>
+            <button class="tower-btn" onclick="selectTower('research')" title="Tour Laboratoire - 300💰">
+              <div class="tower-icon">🔬</div>
+              <div class="tower-name">Laboratoire</div>
+              <div class="tower-stats" id="tower-research-damage">3 dégâts</div>
+              <div class="cost">💰 300</div>
+            </button>
           </div>
         </div>
 
         <!-- Centre: Jeu -->
         <div class="game-center">
+          <!-- Contrôles de musique en jeu -->
+          <div class="music-controls-ingame">
+            <input type="range" id="music-volume-slider-game" min="0" max="1" step="0.01" value="0.5" oninput="setMusicVolume(parseFloat(this.value))">
+            <button id="music-mute-btn-game" onclick="toggleMusicMute()" class="btn-music-mini">🔊</button>
+          </div>
+          
           <!-- Haut: Stats -->
           <div class="game-panel top-panel">
             <div class="stat-item">
@@ -183,7 +226,7 @@
                 <span class="stat-value" id="wave-display">1</span>
               </div>
             </div>
-            <button onclick="toggleResearchPanel()" class="btn-research-toggle">🔬 Recherche</button>
+            <button onclick="toggleResearchPanel()" class="btn-research-toggle" id="research-button">🔬 Recherche</button>
             <button onclick="quitGame()" class="btn-quit">🚪 Quitter</button>
           </div>
 
@@ -218,25 +261,49 @@
                 <div class="monster-icon">🔴</div>
               <div class="monster-name">Basique</div>
               <div class="monster-stats" id="basic-hp">100 HP</div>
-              <div class="cost">💰 50</div>
+              <div class="cost" id="basic-cost">💰 50</div>
             </button>
             <button class="monster-btn" onclick="sendMonster('fast')" title="Rapide - 100💰">
               <div class="monster-icon">🟠</div>
               <div class="monster-name">Rapide</div>
               <div class="monster-stats" id="fast-hp">50 HP</div>
-              <div class="cost">💰 100</div>
+              <div class="cost" id="fast-cost">💰 100</div>
             </button>
             <button class="monster-btn" onclick="sendMonster('tank')" title="Tank - 150💰">
               <div class="monster-icon">⬛</div>
               <div class="monster-name">Tank</div>
               <div class="monster-stats" id="tank-hp">300 HP</div>
-              <div class="cost">💰 150</div>
+              <div class="cost" id="tank-cost">💰 150</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('splitter')" title="Diviseur - 120💰">
+              <div class="monster-icon">🔀</div>
+              <div class="monster-name">Diviseur</div>
+              <div class="monster-stats" id="splitter-hp">150 HP</div>
+              <div class="cost" id="splitter-cost">💰 120</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('buffer')" title="Soigneur - 200💰">
+              <div class="monster-icon">➕</div>
+              <div class="monster-name">Soigneur</div>
+              <div class="monster-stats" id="buffer-hp">200 HP</div>
+              <div class="cost" id="buffer-cost">💰 200</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('stunner')" title="Paralyseur - 180💰">
+              <div class="monster-icon">⚡</div>
+              <div class="monster-name">Paralyseur</div>
+              <div class="monster-stats" id="stunner-hp">180 HP</div>
+              <div class="cost" id="stunner-cost">💰 180</div>
+            </button>
+            <button class="monster-btn" onclick="sendMonster('invisible')" title="Fantôme - 250💰">
+              <div class="monster-icon">👻</div>
+              <div class="monster-name">Fantôme</div>
+              <div class="monster-stats" id="invisible-hp">120 HP</div>
+              <div class="cost" id="invisible-cost">💰 250</div>
             </button>
             <button class="monster-btn" onclick="sendMonster('boss')" title="Boss - 300💰">
               <div class="monster-icon">👿</div>
               <div class="monster-name">Boss</div>
               <div class="monster-stats" id="boss-hp">1000 HP</div>
-              <div class="cost">💰 300</div>
+              <div class="cost" id="boss-cost">💰 300</div>
             </button>
           </div>
         </div>
@@ -250,7 +317,10 @@
           <button onclick="returnToLobby()" class="btn-primary" style="margin-top: 20px;">Retour au Lobby</button>
         </div>
       </div>
-      <div id="tower-menu" class="tower-menu hidden">
+    </div>
+
+    <!-- Menu Tour (en dehors du game-wrapper pour position:fixed) -->
+    <div id="tower-menu" class="tower-menu hidden">
         <div class="tower-menu-content">
           <h3 id="tower-menu-title">Tour</h3>
           
@@ -284,7 +354,7 @@
               </div>
             </div>
             
-            <div class="stat-row upgrade-row">
+            <div id="tower-menu-firerate-row" class="stat-row upgrade-row">
               <div class="stat-col">
                 <span class="stat-label">⚡ Cadence</span>
                 <span id="tower-menu-firerate-current" class="stat-value">1.0x</span>
@@ -295,20 +365,77 @@
                 <span id="tower-menu-firerate-next" class="stat-value upgrade">1.15x</span>
               </div>
             </div>
+            
+            <div id="tower-menu-research-row" class="stat-row upgrade-row" style="display: none;">
+              <div class="stat-col">
+                <span class="stat-label">🔬 Bonus Recherche</span>
+                <span id="tower-menu-research-current" class="stat-value">+1</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-research-next" class="stat-value upgrade">+1</span>
+              </div>
+            </div>
+            
+            <div id="tower-menu-gold-row" class="stat-row upgrade-row" style="display: none;">
+              <div class="stat-col">
+                <span class="stat-label">💰 Bonus Or</span>
+                <span id="tower-menu-gold-current" class="stat-value">x2.0</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-gold-next" class="stat-value upgrade">x2.0</span>
+              </div>
+            </div>
+            
+            <!-- Bouton Améliorer juste après les stats -->
+            <button onclick="upgradeTower()" class="btn-action btn-upgrade btn-upgrade-main">
+              <span>⬆️ Améliorer</span>
+              <span id="tower-upgrade-cost" class="cost-badge">50 💰</span>
+            </button>
+          </div>
+          
+          <div class="tower-abilities-section">
+            <h4>🌟 Compétences</h4>
+            <div id="tower-abilities-list" class="abilities-list">
+              <!-- Rempli dynamiquement -->
+            </div>
+          </div>
+          
+          <div class="tower-targeting-section">
+            <h4>🎯 Stratégie de ciblage</h4>
+            <div class="targeting-modes">
+              <button class="targeting-btn" data-mode="closest" onclick="setTargetMode('closest')">
+                <span class="targeting-icon">📍</span>
+                <span class="targeting-name">Plus proche</span>
+              </button>
+              <button class="targeting-btn" data-mode="weakest" onclick="setTargetMode('weakest')">
+                <span class="targeting-icon">💔</span>
+                <span class="targeting-name">Plus faible HP</span>
+              </button>
+              <button class="targeting-btn" data-mode="fastest" onclick="setTargetMode('fastest')">
+                <span class="targeting-icon">⚡</span>
+                <span class="targeting-name">Plus rapide</span>
+              </button>
+              <button class="targeting-btn" data-mode="nearest_end" onclick="setTargetMode('nearest_end')">
+                <span class="targeting-icon">🎯</span>
+                <span class="targeting-name">Plus près de la fin</span>
+              </button>
+            </div>
           </div>
           
           <div class="tower-menu-actions">
-            <button onclick="upgradeTower()" class="btn-action btn-upgrade">
-              <span>⬆️ Améliorer</span>
-              <span id="tower-upgrade-cost" class="cost-badge">50 💰</span>
+            <button onclick="startMovingTower()" class="btn-action btn-move">
+              <span>👉 Déplacer</span>
+              <span class="cost-badge">25 💰</span>
             </button>
             <button onclick="sellTower()" class="btn-action btn-sell">🗑️ Vendre</button>
             <button onclick="closeTowerMenu()" class="btn-action btn-close">✖️ Fermer</button>
           </div>
         </div>
       </div>
-    </div>
-    <div id="toast-container"></div>
 
     <!-- Modal Recherche -->
     <div id="research-modal" class="modal hidden research-modal">
@@ -336,6 +463,7 @@
   </div>
 
   <script src="js/constants.js"></script>
+  <script src="js/music.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/lobby.js"></script>
   <!-- Modules de jeu -->

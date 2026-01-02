@@ -161,10 +161,12 @@ body {
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: 2000;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
   border: 2px solid #667eea;
   min-width: 350px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .tower-menu-content {
@@ -263,6 +265,27 @@ body {
 
 .btn-upgrade:hover {
   background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+}
+
+/* Bouton améliorer principal dans les stats */
+.btn-upgrade-main {
+  margin-top: 12px;
+  padding: 14px 16px;
+  font-size: 16px;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+}
+
+.btn-upgrade-main:hover {
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.6);
+}
+
+.btn-move {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.btn-move:hover {
+  background: linear-gradient(135deg, #5dade2 0%, #3498db 100%);
 }
 
 .btn-sell {
@@ -898,6 +921,14 @@ body {
   color: #ddd;
 }
 
+.stat-gold {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #ffd700;
+  font-weight: bold;
+}
+
 .stat-life {
   display: flex;
   align-items: center;
@@ -954,8 +985,10 @@ body {
 }
 /* Recherche - Panneau et Modal */
 .btn-research-toggle {
+  position: relative;
+  z-index: 1;
   padding: 10px 15px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3a3a4a;
   color: white;
   border: none;
   border-radius: 8px;
@@ -964,11 +997,27 @@ body {
   font-size: 14px;
   transition: all 0.3s ease;
   flex: 0 1 auto;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.btn-research-toggle::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: var(--research-progress, 0%);
+  height: 4px;
+  background: linear-gradient(90deg, #22aa44, #44dd66);
+  border-radius: 0 0 8px 8px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px rgba(34, 170, 68, 0.6);
 }
 
 .btn-research-toggle:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(58, 58, 74, 0.4);
+  background: #4a4a5a;
 }
 
 .research-modal {
@@ -1094,6 +1143,29 @@ body {
   font-size: 0.9em;
 }
 
+.research-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.current-bonus {
+  font-weight: bold;
+  color: #27ae60;
+  font-size: 1.1em;
+  text-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
+.next-bonus {
+  color: #95a5a6;
+  font-size: 0.95em;
+}
+
 .research-progress-bar {
   position: relative;
   height: 25px;
@@ -1176,16 +1248,16 @@ body {
   position: relative;
   width: 100%;
   height: 24px;
-  background: rgba(0, 0, 0, 0.3);
+  background: #505050;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #3a3a3a;
 }
 
 .research-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
-  transition: width 0.3s ease;
+  transition: width 0.2s ease;
   width: 0%;
 }
 
@@ -1209,4 +1281,303 @@ body {
     width: 95%;
     padding: 20px;
   }
+}
+/* Contr�les de musique */
+.music-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.music-controls label {
+  font-weight: bold;
+  color: #333;
+}
+
+.music-controls input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(102, 126, 234, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.music-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.music-controls input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #5568d3;
+}
+
+.music-controls input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.music-controls input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: #5568d3;
+}
+
+#music-volume-value {
+  min-width: 45px;
+  text-align: center;
+  font-weight: bold;
+  color: #555;
+}
+
+.btn-music {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+
+.btn-music:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.btn-music.muted {
+  background: #e74c3c;
+}
+
+.btn-music.muted:hover {
+  background: #c0392b;
+}
+
+/* Contr�les de musique en jeu (version compacte) */
+.music-controls-ingame {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(5px);
+}
+
+.music-controls-ingame input[type="range"] {
+  width: 100px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.music-controls-ingame input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.music-controls-ingame input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.music-controls-ingame input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.music-controls-ingame input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+.btn-music-mini {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.btn-music-mini:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.btn-music-mini.muted {
+  background: rgba(231, 76, 60, 0.6);
+}
+
+/* Section des comp�tences */
+.tower-abilities-section {
+  margin: 15px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tower-abilities-section h4 {
+  margin: 0 0 12px 0;
+  color: #ffd700;
+  font-size: 16px;
+  text-align: center;
+}
+
+.abilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ability-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(52, 152, 219, 0.2);
+  border: 2px solid #3498db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: white;
+}
+
+.ability-btn:hover:not(.purchased) {
+  background: rgba(52, 152, 219, 0.4);
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.5);
+}
+
+.ability-btn.purchased {
+  background: rgba(46, 204, 113, 0.3);
+  border-color: #2ecc71;
+  cursor: default;
+  opacity: 0.7;
+}
+
+.ability-icon {
+  font-size: 24px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.ability-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ability-name {
+  font-weight: bold;
+  font-size: 14px;
+  color: #fff;
+}
+
+.ability-desc {
+  font-size: 11px;
+  color: #bdc3c7;
+}
+
+.ability-cost {
+  font-weight: bold;
+  font-size: 13px;
+  color: #ffd700;
+  white-space: nowrap;
+}
+
+/* Section de stratégie de ciblage */
+.tower-targeting-section {
+  margin: 15px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tower-targeting-section h4 {
+  margin: 0 0 12px 0;
+  color: #ffd700;
+  font-size: 16px;
+  text-align: center;
+}
+
+.targeting-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.targeting-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  background: rgba(52, 73, 94, 0.5);
+  border: 2px solid #546e7a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: white;
+}
+
+.targeting-btn:hover {
+  background: rgba(52, 152, 219, 0.3);
+  border-color: #3498db;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.targeting-btn.active {
+  background: rgba(46, 204, 113, 0.4);
+  border-color: #2ecc71;
+  box-shadow: 0 0 20px rgba(46, 204, 113, 0.6);
+}
+
+.targeting-icon {
+  font-size: 24px;
+}
+
+.targeting-name {
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
 }
