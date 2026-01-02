@@ -259,13 +259,10 @@ module.exports = (io) => {
       const towerConfig = TOWER_TYPES[tower.id.toUpperCase()];
       
       // Calculer le coût d'amélioration
-      // Pour les tours Gold et Research: prix x2 tous les 5 niveaux
-      let upgradeCost = towerConfig.upgradeCost;
-      if (tower.id === 'gold' || tower.id === 'research') {
-        const currentLevel = tower.level || 1;
-        const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
-        upgradeCost = towerConfig.upgradeCost * multiplier;
-      }
+      // Pour toutes les tours: prix x2 tous les 5 niveaux
+      const currentLevel = tower.level || 1;
+      const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
+      const upgradeCost = towerConfig.upgradeCost * multiplier;
 
       if (player.money < upgradeCost) return;
 

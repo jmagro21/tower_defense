@@ -7,11 +7,17 @@ function spawnMonster(monsterData) {
   // Donc on utilise directement les données sans les modifier
   
   // Déterminer la position initiale
-  // Si pathIndex et progress sont fournis (monstre divisé), utiliser la position calculée
+  // Priorité: startX/startY fournis > pathIndex/progress > début du chemin
   let startX = path[0].x;
   let startY = path[0].y;
   
-  if (monsterData.pathIndex !== undefined && monsterData.progress !== undefined && monsterData.pathIndex < path.length) {
+  // Si startX/startY sont fournis directement, les utiliser
+  if (monsterData.startX !== undefined && monsterData.startY !== undefined) {
+    startX = monsterData.startX;
+    startY = monsterData.startY;
+  }
+  // Sinon si pathIndex et progress sont fournis (monstre divisé), calculer la position
+  else if (monsterData.pathIndex !== undefined && monsterData.progress !== undefined && monsterData.pathIndex < path.length) {
     const currentPathIndex = monsterData.pathIndex;
     const progress = monsterData.progress;
     const current = path[currentPathIndex];
@@ -110,6 +116,70 @@ function spawnMonster(monsterData) {
       yoyo: true,
       repeat: -1
     });
+  } else if (monsterData.id === 'bigboss') {
+    // TITAN - Big Boss géant et terrifiant
+    // Corps principal massif
+    const aura3 = gameScene.add.circle(0, 0, 50, 0x1a0a2e, 0.15);
+    const aura2 = gameScene.add.circle(0, 0, 40, 0x2d1b4e, 0.2);
+    const aura1 = gameScene.add.circle(0, 0, 32, 0x4a2c7a, 0.25);
+    const body = gameScene.add.circle(0, 0, 28, 0x6b3fa0, 0.6);
+    
+    // Cornes imposantes
+    const horn1 = gameScene.add.triangle(-18, -20, -12, -30, -22, -10, 0x1a1a2e);
+    const horn2 = gameScene.add.triangle(18, -20, 12, -30, 22, -10, 0x1a1a2e);
+    const horn3 = gameScene.add.triangle(-25, -8, -20, -18, -28, 0, 0x2d1b4e);
+    const horn4 = gameScene.add.triangle(25, -8, 20, -18, 28, 0, 0x2d1b4e);
+    
+    // Yeux démoniaques
+    const eye1 = gameScene.add.circle(-10, -8, 6, 0xff0000, 0.8);
+    const eye2 = gameScene.add.circle(10, -8, 6, 0xff0000, 0.8);
+    const pupil1 = gameScene.add.circle(-10, -8, 3, 0xffff00, 0.9);
+    const pupil2 = gameScene.add.circle(10, -8, 3, 0xffff00, 0.9);
+    
+    // Bouche terrifiante
+    const mouth = gameScene.add.arc(0, 8, 12, 0, Math.PI, false, 0x000000);
+    const fang1 = gameScene.add.triangle(-8, 6, -6, 2, -10, 2, 0xffffff);
+    const fang2 = gameScene.add.triangle(8, 6, 6, 2, 10, 2, 0xffffff);
+    const fang3 = gameScene.add.triangle(0, 8, -2, 4, 2, 4, 0xffffff);
+    
+    // Particules de ténèbres
+    const dark1 = gameScene.add.circle(-20, 15, 4, 0x4a2c7a, 0.5);
+    const dark2 = gameScene.add.circle(20, 15, 4, 0x4a2c7a, 0.5);
+    const dark3 = gameScene.add.circle(-15, -25, 3, 0x6b3fa0, 0.4);
+    const dark4 = gameScene.add.circle(15, -25, 3, 0x6b3fa0, 0.4);
+    
+    monsterGraphics = [aura3, aura2, aura1, body, horn1, horn2, horn3, horn4, 
+                       eye1, eye2, pupil1, pupil2, mouth, fang1, fang2, fang3,
+                       dark1, dark2, dark3, dark4];
+    
+    // Animation de pulsation menaçante
+    gameScene.tweens.add({
+      targets: [aura1, aura2, aura3],
+      alpha: 0.4,
+      scale: 1.15,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1
+    });
+    
+    // Animation des yeux qui brillent
+    gameScene.tweens.add({
+      targets: [eye1, eye2, pupil1, pupil2],
+      alpha: 0.4,
+      duration: 500,
+      yoyo: true,
+      repeat: -1
+    });
+    
+    // Animation des particules
+    gameScene.tweens.add({
+      targets: [dark1, dark2, dark3, dark4],
+      y: '-=10',
+      alpha: 0,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1
+    });
   }
 
   monsterGraphics.forEach(g => container.add(g));
@@ -163,6 +233,32 @@ function spawnMonster(monsterData) {
     buffCircle.setStrokeStyle(2, 0x27ae60, 0.5);
     container.add(buffCircle);
     monster.buffCircle = buffCircle;
+  }
+  
+  // Si c'est un Big Boss, créer le cercle de buff et configurer le spawn de rapides
+  if (monsterData.id === 'bigboss') {
+    const bigBossConfig = CONSTANTS.MONSTER_TYPES.BIGBOSS;
+    
+    // Cercle de buff de vie (plus grand et menaçant)
+    const buffCircle = gameScene.add.circle(0, 0, bigBossConfig.buffRadius, 0x6b3fa0, 0.12);
+    buffCircle.setStrokeStyle(3, 0x4a2c7a, 0.4);
+    container.add(buffCircle);
+    monster.buffCircle = buffCircle;
+    monster.healthBuff = bigBossConfig.healthBuff;
+    
+    // Timer pour spawn des rapides devant lui
+    monster.spawnTimer = gameScene.time.addEvent({
+      delay: bigBossConfig.spawnInterval,
+      callback: () => {
+        if (monster.sprite && monster.sprite.active && monster.currentHealth > 0) {
+          spawnBigBossMinion(monster);
+        }
+      },
+      loop: true
+    });
+    
+    // Compteur de tours stunnées
+    monster.stunnedTowers = [];
   }
 
   monsters.push(monster);
@@ -218,6 +314,134 @@ function spawnSplitMonster(monsterData) {
   };
 
   monsters.push(monster);
+}
+
+// Spawn 5 minions aléatoires devant le Big Boss
+function spawnBigBossMinion(bigBoss) {
+  if (!gameScene || !bigBoss.sprite || !bigBoss.sprite.active) return;
+  
+  // Liste des types de monstres que le Titan peut spawn (tous sauf bigboss)
+  const monsterTypes = ['basic', 'fast', 'tank', 'splitter', 'buffer', 'stunner', 'invisible', 'boss'];
+  
+  // Spawn 5 monstres
+  for (let i = 0; i < 5; i++) {
+    // Choisir un type aléatoire
+    const randomType = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+    const monsterConfig = CONSTANTS.MONSTER_TYPES[randomType.toUpperCase()];
+    
+    if (!monsterConfig) continue;
+    
+    // Décaler légèrement chaque monstre pour éviter la superposition
+    const progressOffset = 0.05 + (i * 0.02);
+    
+    const minionData = {
+      id: randomType,
+      name: `Serviteur ${monsterConfig.name}`,
+      health: Math.floor(monsterConfig.health * 0.8),  // 80% de vie
+      currentHealth: Math.floor(monsterConfig.health * 0.8),
+      maxHealth: Math.floor(monsterConfig.health * 0.8),
+      baseHealth: Math.floor(monsterConfig.health * 0.8),
+      speed: monsterConfig.speed,
+      baseSpeed: monsterConfig.speed,
+      reward: Math.floor(monsterConfig.reward / 2),  // 50% de récompense
+      pathIndex: bigBoss.pathIndex,
+      progress: Math.min(1, bigBoss.progress + progressOffset),
+      isBigBossMinion: true,
+      // Copier les propriétés spéciales du monstre
+      canSplit: monsterConfig.canSplit || false,
+      isInvisible: monsterConfig.isInvisible || false,
+      buffRadius: monsterConfig.buffRadius || 0,
+      healthBuff: monsterConfig.healthBuff || 0,
+      maxStuns: monsterConfig.maxStuns || 0,
+      stunDuration: monsterConfig.stunDuration || 0
+    };
+    
+    // Petit délai entre chaque spawn
+    setTimeout(() => {
+      if (bigBoss.sprite && bigBoss.sprite.active) {
+        spawnMonster(minionData);
+      }
+    }, i * 100);
+  }
+  
+  // Effet visuel de spawn massif
+  if (bigBoss.sprite) {
+    const spawnEffect = gameScene.add.circle(bigBoss.sprite.x, bigBoss.sprite.y, 30, 0x8e44ad, 0.6);
+    spawnEffect.setDepth(50);
+    gameScene.tweens.add({
+      targets: spawnEffect,
+      scale: 3,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => spawnEffect.destroy()
+    });
+    
+    // Étoiles de spawn
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const star = gameScene.add.circle(
+        bigBoss.sprite.x + Math.cos(angle) * 20,
+        bigBoss.sprite.y + Math.sin(angle) * 20,
+        5, 0xf39c12, 0.8
+      );
+      star.setDepth(51);
+      gameScene.tweens.add({
+        targets: star,
+        x: bigBoss.sprite.x + Math.cos(angle) * 60,
+        y: bigBoss.sprite.y + Math.sin(angle) * 60,
+        alpha: 0,
+        scale: 0.5,
+        duration: 600,
+        onComplete: () => star.destroy()
+      });
+    }
+  }
+}
+
+// Spawn un Boss depuis le Big Boss mort
+function spawnBossFromBigBoss(posX, posY, pathIndex, progress) {
+  if (!gameScene) return;
+  
+  const bossConfig = CONSTANTS.MONSTER_TYPES.BOSS;
+  
+  const bossData = {
+    id: 'boss',
+    name: 'Boss',
+    health: bossConfig.health,
+    currentHealth: bossConfig.health,
+    maxHealth: bossConfig.health,
+    baseHealth: bossConfig.health,
+    speed: bossConfig.speed,
+    baseSpeed: bossConfig.speed,
+    reward: bossConfig.reward,
+    pathIndex: pathIndex,
+    progress: progress,
+    startX: posX,
+    startY: posY,
+    isFromBigBoss: true,
+    isSplitBoss: true  // Ne peut pas re-diviser
+  };
+  
+  // Utiliser spawnMonster avec position personnalisée
+  spawnMonster(bossData);
+  
+  // Ajuster la position du dernier monstre ajouté
+  const newBoss = monsters[monsters.length - 1];
+  if (newBoss && newBoss.sprite) {
+    newBoss.sprite.x = posX;
+    newBoss.sprite.y = posY;
+    
+    // Effet visuel de spawn du boss
+    const spawnEffect = gameScene.add.circle(posX, posY, 30, 0x8e44ad, 0.6);
+    spawnEffect.setDepth(50);
+    gameScene.tweens.add({
+      targets: spawnEffect,
+      scale: 2,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => spawnEffect.destroy()
+    });
+  }
 }
 
 function moveMonster(monster) {
@@ -354,10 +578,44 @@ function shootAtMonster(tower, monster) {
     }
   });
   
-  // Si c'est un stunner et qu'il n'a pas encore stun 2 tours
+  // Si c'est un stunner et qu'il n'a pas encore stun le max de tours
   if (monster.id === 'stunner' && monster.stunCount < CONSTANTS.MONSTER_TYPES.STUNNER.maxStuns) {
     stunTower(tower, CONSTANTS.MONSTER_TYPES.STUNNER.stunDuration);
     monster.stunCount++;
+  }
+  
+  // Big Boss paralyse les 5 premières tours qui lui tirent dessus
+  if (monster.id === 'bigboss' && monster.stunCount < (monster.maxStuns || 5)) {
+    // Vérifier si cette tour n'a pas déjà été stunnée par ce Big Boss
+    if (!monster.stunnedTowers) monster.stunnedTowers = [];
+    
+    const towerKey = `${tower.x}-${tower.y}`;
+    if (!monster.stunnedTowers.includes(towerKey)) {
+      monster.stunnedTowers.push(towerKey);
+      monster.stunCount++;
+      
+      // Stun la tour pendant 5 secondes
+      const bigBossStunDuration = CONSTANTS.MONSTER_TYPES.BIGBOSS?.stunDuration || 5000;
+      stunTower(tower, bigBossStunDuration);
+      
+      // Effet visuel spécial pour le stun du Big Boss
+      if (gameScene) {
+        const stunRing = gameScene.add.circle(tower.x, tower.y, 40, 0x8e44ad, 0);
+        stunRing.setStrokeStyle(3, 0x8e44ad);
+        stunRing.setDepth(200);
+        
+        gameScene.tweens.add({
+          targets: stunRing,
+          scaleX: 1.5,
+          scaleY: 1.5,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => stunRing.destroy()
+        });
+      }
+      
+      showToast(`⚡ Tour paralysée par le Titan ! (${monster.stunCount}/5)`, 'danger');
+    }
   }
 
   const tween = gameScene.tweens.add({
@@ -634,6 +892,39 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
     if (monster.poisonEffect) monster.poisonEffect.destroy();
   }
   
+  // Nettoyer le timer de spawn pour Big Boss
+  if (monster.spawnTimer) {
+    clearInterval(monster.spawnTimer);
+    monster.spawnTimer = null;
+  }
+  
+  // Vérifier si c'est un Big Boss qui doit se diviser en 5 Boss
+  const shouldSplitToBoss = monster.canSplitToBoss && monster.currentHealth <= 0 && !monster.isSplitBoss;
+  
+  // Big Boss se divise en 5 Boss à la mort
+  if (shouldSplitToBoss && gameScene) {
+    const currentPosX = monster.sprite.x;
+    const currentPosY = monster.sprite.y;
+    const currentPathIndex = monster.pathIndex;
+    const currentProgress = monster.progress;
+    const splitCount = monster.splitCount || 5;
+    
+    // Créer 5 Boss
+    for (let i = 0; i < splitCount; i++) {
+      // Décaler les boss en cercle autour de la position
+      const angle = (i / splitCount) * Math.PI * 2;
+      const offsetX = Math.cos(angle) * 30;
+      const offsetY = Math.sin(angle) * 30;
+      
+      // Petit délai pour l'apparition progressive
+      setTimeout(() => {
+        spawnBossFromBigBoss(currentPosX + offsetX, currentPosY + offsetY, currentPathIndex, currentProgress);
+      }, i * 200);
+    }
+    
+    showToast('💀 TITAN DÉTRUIT - 5 BOSS ÉMERGENT !', 'danger');
+  }
+  
   // Vérifier si le monstre peut se diviser
   const shouldSplit = monster.canSplit && monster.currentHealth <= 0 && !monster.isSplit;
   
@@ -789,36 +1080,50 @@ function monsterReachedEnd(monster) {
 
 // Système de buff des monstres
 function updateMonsterBuffs() {
-  // Trouver tous les buffers actifs
-  const buffers = monsters.filter(m => m.id === 'buffer' && m.sprite && m.sprite.active);
+  // Trouver tous les buffers actifs (buffer et bigboss)
+  const buffers = monsters.filter(m => (m.id === 'buffer' || m.id === 'bigboss') && m.sprite && m.sprite.active);
   
   // Pour chaque monstre, vérifier s'il est dans le rayon d'un buffer
   monsters.forEach(monster => {
-    if (!monster.sprite || !monster.sprite.active || monster.id === 'buffer') return;
+    if (!monster.sprite || !monster.sprite.active || monster.id === 'buffer' || monster.id === 'bigboss') return;
     
     let isInBuffRange = false;
+    let buffMultiplier = 1;
     
-    // Vérifier si le monstre est dans le rayon d'un buffer
+    // Vérifier si le monstre est dans le rayon d'un buffer ou bigboss
     for (const buffer of buffers) {
       const dx = monster.sprite.x - buffer.sprite.x;
       const dy = monster.sprite.y - buffer.sprite.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
-      if (distance <= CONSTANTS.MONSTER_TYPES.BUFFER.buffRadius) {
+      // Utiliser le rayon approprié selon le type de buffer
+      let buffRadius, healthBuff;
+      if (buffer.id === 'bigboss') {
+        buffRadius = CONSTANTS.MONSTER_TYPES.BIGBOSS?.buffRadius || 200;
+        healthBuff = CONSTANTS.MONSTER_TYPES.BIGBOSS?.healthBuff || 2.0;
+      } else {
+        buffRadius = CONSTANTS.MONSTER_TYPES.BUFFER.buffRadius;
+        healthBuff = CONSTANTS.MONSTER_TYPES.BUFFER.healthBuff;
+      }
+      
+      if (distance <= buffRadius) {
         isInBuffRange = true;
+        // Prendre le buff le plus fort si plusieurs sources
+        buffMultiplier = Math.max(buffMultiplier, healthBuff);
         break;
       }
     }
     
     // Appliquer ou retirer le buff
     if (isInBuffRange && !monster.isBuffed) {
-      // Appliquer le buff
+      // Appliquer le buff (utiliser le multiplier dynamique)
       const healthBefore = monster.currentHealth;
       const maxHealthBefore = monster.maxHealth;
       
-      monster.maxHealth = Math.round(monster.baseHealth * CONSTANTS.MONSTER_TYPES.BUFFER.healthBuff);
+      monster.maxHealth = Math.round(monster.baseHealth * buffMultiplier);
       monster.currentHealth = Math.round(healthBefore * (monster.maxHealth / maxHealthBefore));
       monster.isBuffed = true;
+      monster.currentBuffMultiplier = buffMultiplier;
       
       // Mettre à jour l'affichage
       if (monster.healthBar && monster.healthBar.active) {

@@ -73,6 +73,7 @@ function updateMonsterHPDisplay() {
   const stunnerHP = Math.floor(CONSTANTS.MONSTER_TYPES.STUNNER.health * monsterHealthMultiplier);
   const invisibleHP = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.health * monsterHealthMultiplier);
   const bossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.health * monsterHealthMultiplier);
+  const bigbossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.health * monsterHealthMultiplier);
   
   const basicElement = document.getElementById('basic-hp');
   const tankElement = document.getElementById('tank-hp');
@@ -82,6 +83,7 @@ function updateMonsterHPDisplay() {
   const stunnerElement = document.getElementById('stunner-hp');
   const invisibleElement = document.getElementById('invisible-hp');
   const bossElement = document.getElementById('boss-hp');
+  const bigbossElement = document.getElementById('bigboss-hp');
   
   if (basicElement) basicElement.textContent = `${basicHP} HP`;
   if (tankElement) tankElement.textContent = `${tankHP} HP`;
@@ -91,6 +93,7 @@ function updateMonsterHPDisplay() {
   if (stunnerElement) stunnerElement.textContent = `${stunnerHP} HP`;
   if (invisibleElement) invisibleElement.textContent = `${invisibleHP} HP`;
   if (bossElement) bossElement.textContent = `${bossHP} HP`;
+  if (bigbossElement) bigbossElement.textContent = `${bigbossHP} HP`;
 }
 
 function updateMonsterCostDisplay() {
@@ -107,6 +110,7 @@ function updateMonsterCostDisplay() {
   const stunnerCost = Math.floor(CONSTANTS.MONSTER_TYPES.STUNNER.cost * (1 - costReduction));
   const invisibleCost = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.cost * (1 - costReduction));
   const bossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.cost * (1 - costReduction));
+  const bigbossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.cost * (1 - costReduction));
   
   const basicElement = document.getElementById('basic-cost');
   const tankElement = document.getElementById('tank-cost');
@@ -116,6 +120,7 @@ function updateMonsterCostDisplay() {
   const stunnerElement = document.getElementById('stunner-cost');
   const invisibleElement = document.getElementById('invisible-cost');
   const bossElement = document.getElementById('boss-cost');
+  const bigbossElement = document.getElementById('bigboss-cost');
   
   if (basicElement) basicElement.textContent = `💰 ${basicCost}`;
   if (tankElement) tankElement.textContent = `💰 ${tankCost}`;
@@ -125,6 +130,7 @@ function updateMonsterCostDisplay() {
   if (stunnerElement) stunnerElement.textContent = `💰 ${stunnerCost}`;
   if (invisibleElement) invisibleElement.textContent = `💰 ${invisibleCost}`;
   if (bossElement) bossElement.textContent = `💰 ${bossCost}`;
+  if (bigbossElement) bigbossElement.textContent = `💰 ${bigbossCost}`;
 }
 
 function showNotification(message) {
@@ -217,7 +223,17 @@ function sendMonster(monsterType) {
     speed: Math.floor(monsterData.speed * (1 + speedBonus)),
     reward: Math.floor(monsterData.reward * rewardMultiplier),
     cost: totalCost,
-    level: monsterLevel
+    level: monsterLevel,
+    // Propriétés spéciales des monstres (si présentes)
+    isInvisible: monsterData.isInvisible || false,
+    canSplit: monsterData.canSplit || false,
+    canSplitToBoss: monsterData.canSplitToBoss || false,
+    splitCount: monsterData.splitCount || 0,
+    stunDuration: monsterData.stunDuration || 0,
+    maxStuns: monsterData.maxStuns || 0,
+    buffRadius: monsterData.buffRadius || 0,
+    healthBuff: monsterData.healthBuff || 0,
+    spawnInterval: monsterData.spawnInterval || 0
   };
 
   // Si c'est un buffer, envoyer aussi les monstres basiques

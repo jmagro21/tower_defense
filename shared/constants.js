@@ -161,6 +161,22 @@ module.exports = {
       speed: 10,
       reward: 200
     },
+    BIGBOSS: {
+      id: 'bigboss',
+      name: 'Titan',
+      cost: 10000,
+      health: 15000,
+      speed: 8,
+      reward: 2000,
+      isInvisible: true,       // Invisible
+      stunDuration: 3000,      // Paralyse pendant 3s
+      maxStuns: 5,             // Paralyse les 5 premières tours
+      buffRadius: 200,         // Rayon du buff de vie
+      healthBuff: 2.0,         // Double la vie des monstres à proximité
+      spawnInterval: 3000,     // Spawn un rapide toutes les 3s
+      canSplitToBoss: true,    // Se divise en 5 boss à sa mort
+      splitCount: 5            // Nombre de boss à spawn
+    },
     SPLITTER: {
       id: 'splitter',
       name: 'Diviseur',

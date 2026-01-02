@@ -810,6 +810,37 @@ body {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+/* Style spécial pour le bouton Big Boss (Titan) */
+.monster-btn.bigboss-btn {
+  background: linear-gradient(135deg, #8e44ad 0%, #6b3fa0 50%, #4a2c7a 100%);
+  border: 2px solid #f39c12;
+  animation: titan-pulse 2s infinite;
+}
+
+.monster-btn.bigboss-btn:hover {
+  box-shadow: 0 4px 20px rgba(142, 68, 173, 0.6);
+  border-color: #f1c40f;
+}
+
+.monster-btn.bigboss-btn .monster-name {
+  color: #f1c40f;
+  text-shadow: 0 0 5px #f39c12;
+}
+
+.monster-btn.bigboss-btn .cost {
+  color: #ff6b6b;
+  font-size: 11px;
+}
+
+@keyframes titan-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(142, 68, 173, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(142, 68, 173, 0.8), 0 0 25px rgba(243, 156, 18, 0.3);
+  }
+}
+
 .tower-btn.selected {
   background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
   border-color: #f1c40f;
