@@ -154,38 +154,44 @@
       <div class="game-wrapper">
         <!-- Panneau gauche: Tours -->
         <div class="game-panel left-panel">
-          <h3>🏗️ Tours</h3>
+          <button onclick="toggleTowersPanel()" class="btn-towers-header" id="towers-button" title="Gérer toutes les tours">🏗️ Tours</button>
           <div id="tower-count" style="text-align: center; margin: 5px 0; font-size: 14px; color: #888;">0 / 20</div>
           <div class="tower-shop">
-            <button class="tower-btn" ontouchstart="selectTower('basic', event)" onclick="selectTower('basic', event)" title="Tour Basique - 100💰">
+            <button class="tower-btn" data-tower="basic" ontouchstart="selectTower('basic', event)" onclick="selectTower('basic', event)">
               <div class="tower-icon">🔷</div>
               <div class="tower-name">Basique</div>
               <div class="tower-stats" id="tower-basic-damage">10 dégâts</div>
               <div class="cost">💰 100</div>
             </button>
-            <button class="tower-btn" ontouchstart="selectTower('sniper', event)" onclick="selectTower('sniper', event)" title="Tour Sniper - 200💰">
+            <button class="tower-btn" data-tower="sniper" ontouchstart="selectTower('sniper', event)" onclick="selectTower('sniper', event)">
               <div class="tower-icon">🎯</div>
               <div class="tower-name">Sniper</div>
               <div class="tower-stats" id="tower-sniper-damage">50 dégâts</div>
               <div class="cost">💰 200</div>
             </button>
-            <button class="tower-btn" ontouchstart="selectTower('rapid', event)" onclick="selectTower('rapid', event)" title="Tour Rapide - 150💰">
+            <button class="tower-btn" data-tower="rapid" ontouchstart="selectTower('rapid', event)" onclick="selectTower('rapid', event)">
               <div class="tower-icon">⚡</div>
               <div class="tower-name">Rapide</div>
               <div class="tower-stats" id="tower-rapid-damage">5 dégâts</div>
               <div class="cost">💰 150</div>
             </button>
-            <button class="tower-btn" ontouchstart="selectTower('gold', event)" onclick="selectTower('gold', event)" title="Tour Dorée - 250💰">
+            <button class="tower-btn" data-tower="gold" ontouchstart="selectTower('gold', event)" onclick="selectTower('gold', event)">
               <div class="tower-icon">💰</div>
               <div class="tower-name">Dorée</div>
               <div class="tower-stats" id="tower-gold-damage">8 dégâts</div>
               <div class="cost">💰 250</div>
             </button>
-            <button class="tower-btn" ontouchstart="selectTower('research', event)" onclick="selectTower('research', event)" title="Tour Laboratoire - 300💰">
+            <button class="tower-btn" data-tower="research" ontouchstart="selectTower('research', event)" onclick="selectTower('research', event)">
               <div class="tower-icon">🔬</div>
               <div class="tower-name">Laboratoire</div>
               <div class="tower-stats" id="tower-research-damage">3 dégâts</div>
               <div class="cost">💰 300</div>
+            </button>
+            <button class="tower-btn" data-tower="electric" ontouchstart="selectTower('electric', event)" onclick="selectTower('electric', event)">
+              <div class="tower-icon">⚡</div>
+              <div class="tower-name">Électrique</div>
+              <div class="tower-stats" id="tower-electric-damage">15 dégâts</div>
+              <div class="cost">💰 500</div>
             </button>
           </div>
         </div>
@@ -222,14 +228,15 @@
               </div>
             </div>
             <div class="stat-item">
-              <span class="stat-icon">🌊</span>
+              <span class="stat-icon">⚔️</span>
               <div class="stat-content">
-                <span class="stat-label">Vague</span>
-                <span class="stat-value" id="wave-display">1</span>
+                <span class="stat-label">Attaque</span>
+                <span class="stat-value" id="attack-gold-display">0</span>
               </div>
             </div>
             <button onclick="toggleResearchPanel()" class="btn-research-toggle" id="research-button">🔬 Recherche</button>
-            <button onclick="toggleRangeCircles()" class="btn-range-toggle" id="range-button" title="Afficher/masquer les portées">🎯 Portées</button>
+            <button onclick="useActiveSkill()" class="btn-skill hidden" id="skill-button" title="Utiliser votre compétence de classe">⚡ Compétence</button>
+            <button onclick="toggleMonsterAuras()" class="btn-aura-toggle active" id="aura-button" title="Afficher/masquer les auras des monstres">👁️ Auras ON</button>
             <button onclick="quitGame()" class="btn-quit">🚪 Quitter</button>
           </div>
 
@@ -259,56 +266,57 @@
               <label class="target-label">Cible:</label>
               <select id="target-player" class="target-select">
                 <option value="">Choisir un joueur</option>
+                <option value="everyone">🌍 TOUT LE MONDE (-20%)</option>
               </select>
-              <button class="monster-btn" ontouchstart="sendMonster('basic')" onclick="sendMonster('basic')" title="Basique - 50💰">
+              <button class="monster-btn" data-monster="basic" ontouchstart="sendMonster('basic')" onclick="sendMonster('basic')">
                 <div class="monster-icon">🔴</div>
               <div class="monster-name">Basique</div>
               <div class="monster-stats" id="basic-hp">100 HP</div>
               <div class="cost" id="basic-cost">💰 50</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('fast')" onclick="sendMonster('fast')" title="Rapide - 100💰">
+            <button class="monster-btn" data-monster="fast" ontouchstart="sendMonster('fast')" onclick="sendMonster('fast')">
               <div class="monster-icon">🟠</div>
               <div class="monster-name">Rapide</div>
               <div class="monster-stats" id="fast-hp">50 HP</div>
               <div class="cost" id="fast-cost">💰 100</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('tank')" onclick="sendMonster('tank')" title="Tank - 150💰">
+            <button class="monster-btn" data-monster="tank" ontouchstart="sendMonster('tank')" onclick="sendMonster('tank')">
               <div class="monster-icon">⬛</div>
               <div class="monster-name">Tank</div>
               <div class="monster-stats" id="tank-hp">300 HP</div>
               <div class="cost" id="tank-cost">💰 150</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('splitter')" onclick="sendMonster('splitter')" title="Diviseur - 120💰">
+            <button class="monster-btn" data-monster="splitter" ontouchstart="sendMonster('splitter')" onclick="sendMonster('splitter')">
               <div class="monster-icon">🔀</div>
               <div class="monster-name">Diviseur</div>
               <div class="monster-stats" id="splitter-hp">150 HP</div>
               <div class="cost" id="splitter-cost">💰 120</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('buffer')" onclick="sendMonster('buffer')" title="Soigneur - 200💰">
+            <button class="monster-btn" data-monster="buffer" ontouchstart="sendMonster('buffer')" onclick="sendMonster('buffer')">
               <div class="monster-icon">➕</div>
               <div class="monster-name">Soigneur</div>
               <div class="monster-stats" id="buffer-hp">200 HP</div>
               <div class="cost" id="buffer-cost">💰 200</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('stunner')" onclick="sendMonster('stunner')" title="Paralyseur - 180💰">
+            <button class="monster-btn" data-monster="stunner" ontouchstart="sendMonster('stunner')" onclick="sendMonster('stunner')">
               <div class="monster-icon">⚡</div>
               <div class="monster-name">Paralyseur</div>
               <div class="monster-stats" id="stunner-hp">180 HP</div>
               <div class="cost" id="stunner-cost">💰 180</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('invisible')" onclick="sendMonster('invisible')" title="Fantôme - 250💰">
+            <button class="monster-btn" data-monster="invisible" ontouchstart="sendMonster('invisible')" onclick="sendMonster('invisible')">
               <div class="monster-icon">👻</div>
               <div class="monster-name">Fantôme</div>
               <div class="monster-stats" id="invisible-hp">120 HP</div>
               <div class="cost" id="invisible-cost">💰 250</div>
             </button>
-            <button class="monster-btn" ontouchstart="sendMonster('boss')" onclick="sendMonster('boss')" title="Boss - 300💰">
+            <button class="monster-btn" data-monster="boss" ontouchstart="sendMonster('boss')" onclick="sendMonster('boss')">
               <div class="monster-icon">👿</div>
               <div class="monster-name">Boss</div>
               <div class="monster-stats" id="boss-hp">1000 HP</div>
               <div class="cost" id="boss-cost">💰 300</div>
             </button>
-            <button class="monster-btn bigboss-btn" ontouchstart="sendMonster('bigboss')" onclick="sendMonster('bigboss')" title="Titan - 10000💰">
+            <button class="monster-btn bigboss-btn" data-monster="bigboss" ontouchstart="sendMonster('bigboss')" onclick="sendMonster('bigboss')">
               <div class="monster-icon">👹</div>
               <div class="monster-name">TITAN</div>
               <div class="monster-stats" id="bigboss-hp">15000 HP</div>
@@ -432,6 +440,10 @@
                 <span class="targeting-icon">🎯</span>
                 <span class="targeting-name">Plus près de la fin</span>
               </button>
+              <button class="targeting-btn" data-mode="most_hp" onclick="setTargetMode('most_hp')">
+                <span class="targeting-icon">🛡️</span>
+                <span class="targeting-name">Plus de HP</span>
+              </button>
             </div>
           </div>
           
@@ -469,6 +481,33 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Liste des Tours -->
+    <div id="towers-modal" class="modal hidden towers-modal">
+      <div class="towers-modal-content">
+        <div class="towers-header-modal">
+          <h2>🏰 Gestion des Tours</h2>
+          <button onclick="toggleTowersPanel()" class="btn-close-modal">✖️</button>
+        </div>
+        <div id="towers-list-content" class="towers-list-content">
+          <!-- Rempli dynamiquement par le JS -->
+          <p class="no-towers-message">Aucune tour placée pour le moment.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Sélection de Classe -->
+    <div id="class-selection-modal" class="modal hidden class-modal">
+      <div class="class-modal-content">
+        <div class="class-header-modal">
+          <h2>⚔️ Choisissez votre Classe</h2>
+          <p class="class-subtitle">Sélectionnez une spécialisation pour cette partie</p>
+        </div>
+        <div id="class-selection-content" class="class-selection-content">
+          <!-- Rempli dynamiquement par classes.js -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="js/constants.js"></script>
@@ -482,6 +521,9 @@
   <script src="js/waves.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/research.js"></script>
+  <script src="js/classes.js"></script>
+  <script src="js/tooltip.js"></script>
+  <script src="js/spectator.js"></script>
   <script src="js/socket-events.js"></script>
   <script src="js/game-cleanup.js"></script>
   <!-- Cœur du jeu -->

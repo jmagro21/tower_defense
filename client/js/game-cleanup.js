@@ -14,6 +14,7 @@ function returnToLobby() {
   
   gameScene = null;
   towers = [];
+  window.towers = towers;
   monsters = [];
   path = [];
   pathCells.clear();
@@ -25,6 +26,7 @@ function returnToLobby() {
   }
   if (movingTower) {
     movingTower = null;
+    window.movingTower = null;
   }
   
   // Nettoyer les effets de stun
@@ -42,6 +44,7 @@ function returnToLobby() {
   
   playerMoney = 500;
   playerHealth = 0;
+  window.playerHealth = 0; // Sync pour le système spectateur
   playerKills = 0;
   gameTime = 0;
   spawnUnitCapacity = 0;
@@ -81,6 +84,7 @@ function quitGame() {
     
     gameScene = null;
     towers = [];
+    window.towers = towers;
     monsters = [];
     
     localStorage.removeItem('gameState');

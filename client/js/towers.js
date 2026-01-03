@@ -192,6 +192,29 @@ function addTowerToScene(towerData) {
       yoyo: true,
       repeat: -1
     });
+  } else if (enhancedTowerData.id === 'electric') {
+    // Tour électrique - Tesla coil style
+    const base = gameScene.add.circle(0, 8, 20, 0x2c3e50);
+    const coil1 = gameScene.add.rectangle(0, 0, 10, 30, 0x7f8c8d);
+    const coil2 = gameScene.add.circle(0, -15, 12, 0x3498db);
+    const spark1 = gameScene.add.circle(-8, -18, 3, 0x00ffff);
+    const spark2 = gameScene.add.circle(8, -18, 3, 0x00ffff);
+    const spark3 = gameScene.add.circle(0, -22, 4, 0xffff00);
+    const ring1 = gameScene.add.circle(0, -5, 8, 0x5dade2, 0);
+    ring1.setStrokeStyle(2, 0x5dade2);
+    const ring2 = gameScene.add.circle(0, 5, 6, 0x5dade2, 0);
+    ring2.setStrokeStyle(2, 0x5dade2);
+    towerGraphics = [base, coil1, ring1, ring2, coil2, spark1, spark2, spark3];
+    
+    // Animation des éclairs
+    gameScene.tweens.add({
+      targets: [spark1, spark2, spark3],
+      alpha: 0.2,
+      scale: 1.5,
+      duration: 200,
+      yoyo: true,
+      repeat: -1
+    });
   } else {
     // Par défaut, créer une tour basique simple
     const base = gameScene.add.circle(0, 5, 18, 0x808080);
@@ -276,13 +299,14 @@ function addTowerToScene(towerData) {
     });
   }
 
-  towers.push({
+  const newTower = {
     ...enhancedTowerData,
+    level: enhancedTowerData.level || 1, // S'assurer que le niveau est défini
     sprite: container,
     rangeCircle: rangeCircle,
     goldAura: goldAura,
     researchAura: researchAura,
-    targetMode: 'closest', // Mode de ciblage par défaut
+    targetMode: 'nearest_end', // Mode de ciblage par défaut: plus proche de la fin
     levelText: levelText,
     cooldown: 0,
     isStunned: false,
@@ -290,7 +314,13 @@ function addTowerToScene(towerData) {
     stunIcon: null,
     stunEndTime: 0,
     abilities: []  // Liste des compétences achetées
-  });
+  };
+  
+  towers.push(newTower);
+  
+  // Synchroniser avec window.towers pour les autres scripts
+  window.towers = towers;
+  console.log('[TOWERS] Tour ajoutée, total:', towers.length, towers);
 }
 
 function openTowerMenu(towerData, container) {
@@ -588,6 +618,7 @@ function startMovingTower() {
   
   // Stocker la tour à déplacer
   movingTower = selectedTower;
+  window.movingTower = movingTower;
   
   // Créer un cercle de preview de portée
   if (gameScene && !towerRangePreview) {
@@ -624,13 +655,54 @@ function moveTower(x, y) {
     return;
   }
   
-  // Envoyer la demande de déplacement au serveur
-  socket.emit(CONSTANTS.SOCKET_EVENTS.MOVE_TOWER, {
-    oldX: movingTower.x,
-    oldY: movingTower.y,
-    newX: x,
-    newY: y
-  });
+  // Appliquer le déplacement localement (sans attendre le serveur)
+  const oldX = movingTower.x;
+  const oldY = movingTower.y;
+  
+  // Supprimer l'ancienne position des cellules occupées
+  towerCells.delete(`${oldX},${oldY}`);
+  
+  // Mettre à jour la position de la tour
+  movingTower.x = x;
+  movingTower.y = y;
+  movingTower.sprite.setPosition(x, y);
+  
+  // Mettre à jour le cercle de portée
+  if (movingTower.rangeCircle) {
+    movingTower.rangeCircle.setPosition(x, y);
+  }
+  
+  // Mettre à jour les auras si présentes
+  if (movingTower.goldAura) {
+    movingTower.goldAura.setPosition(x, y);
+  }
+  if (movingTower.researchAura) {
+    movingTower.researchAura.setPosition(x, y);
+  }
+  
+  // Mettre à jour les icônes d'abilities
+  if (movingTower.abilityIcons && movingTower.abilityIcons.length > 0) {
+    movingTower.abilityIcons.forEach((icon, index) => {
+      icon.setPosition(x + index * 15 - 15, y - 45);
+    });
+  }
+  
+  // Ajouter la nouvelle position aux cellules occupées
+  towerCells.add(`${x},${y}`);
+  
+  // Déduire le coût
+  playerMoney -= MOVE_TOWER_COST;
+  updateUI();
+  
+  // Envoyer la mise à jour au serveur
+  if (socket) {
+    socket.emit(CONSTANTS.SOCKET_EVENTS.MOVE_TOWER, {
+      oldX: oldX,
+      oldY: oldY,
+      newX: x,
+      newY: y
+    });
+  }
   
   // Restaurer l'opacité de la tour
   movingTower.sprite.setAlpha(1);
@@ -641,7 +713,10 @@ function moveTower(x, y) {
     towerRangePreview = null;
   }
   
+  showToast(`✅ Tour déplacée ! (-${MOVE_TOWER_COST} 💰)`, 'success');
+  
   movingTower = null;
+  window.movingTower = null;
 }
 
 function upgradeTower() {
@@ -652,11 +727,18 @@ function upgradeTower() {
   
   const defenseBonuses = getDefenseBonuses();
   
+  // Passif classe Ingénieur: réduction supplémentaire
+  let engineerDiscount = 0;
+  if (typeof getEngineerUpgradeDiscount === 'function') {
+    engineerDiscount = getEngineerUpgradeDiscount();
+  }
+  
   // Coût d'amélioration: prix x2 tous les 5 niveaux pour toutes les tours
   const currentLevel = selectedTower.level || 1;
   const priceMultiplier = Math.pow(2, Math.floor(currentLevel / 5));
   const baseUpgradeCost = towerConfig.upgradeCost * priceMultiplier;
-  const upgradeCost = Math.floor(baseUpgradeCost * (1 - defenseBonuses.upgradeCostReduction / 100));
+  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
+  const upgradeCost = Math.floor(baseUpgradeCost * (1 - totalReduction / 100));
   
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');
@@ -673,30 +755,30 @@ function upgradeTower() {
   // Ne pas fermer le menu, il sera mis à jour par l'événement TOWER_UPGRADED
 }
 
-// Toggle l'affichage des cercles de portée de toutes les tours
-function toggleRangeCircles() {
-  showRangeCircles = !showRangeCircles;
+// Toggle l'affichage des cercles d'aura des monstres (buffer, bigboss)
+function toggleMonsterAuras() {
+  showMonsterAuras = !showMonsterAuras;
   
   // Mettre à jour le bouton
-  const rangeButton = document.getElementById('range-button');
-  if (rangeButton) {
-    if (showRangeCircles) {
-      rangeButton.classList.add('active');
-      rangeButton.textContent = '🎯 Portées ON';
+  const auraButton = document.getElementById('aura-button');
+  if (auraButton) {
+    if (showMonsterAuras) {
+      auraButton.classList.add('active');
+      auraButton.textContent = '👁️ Auras ON';
     } else {
-      rangeButton.classList.remove('active');
-      rangeButton.textContent = '🎯 Portées';
+      auraButton.classList.remove('active');
+      auraButton.textContent = '👁️ Auras OFF';
     }
   }
   
-  // Afficher ou masquer les cercles de toutes les tours
-  towers.forEach(tower => {
-    if (tower.rangeCircle) {
-      tower.rangeCircle.setVisible(showRangeCircles);
+  // Afficher ou masquer les cercles d'aura de tous les monstres
+  monsters.forEach(monster => {
+    if (monster.buffCircle) {
+      monster.buffCircle.setVisible(showMonsterAuras);
     }
   });
   
-  showToast(showRangeCircles ? '🎯 Portées affichées' : '🎯 Portées masquées', 'info');
+  showToast(showMonsterAuras ? '👁️ Auras monstres visibles' : '👁️ Auras monstres masquées', 'info');
 }
 
 function sellTower() {
@@ -722,7 +804,8 @@ function setTargetMode(mode) {
     'closest': 'Plus proche',
     'weakest': 'Plus faible HP',
     'fastest': 'Plus rapide',
-    'nearest_end': 'Plus près de la fin'
+    'nearest_end': 'Plus près de la fin',
+    'most_hp': 'Plus de HP'
   }[mode];
   
   showToast(`🎯 Ciblage: ${modeName}`, 'info');
@@ -732,7 +815,7 @@ function setTargetMode(mode) {
 function updateTargetModeDisplay() {
   if (!selectedTower) return;
   
-  const currentMode = selectedTower.targetMode || 'closest';
+  const currentMode = selectedTower.targetMode || 'nearest_end';
   const buttons = document.querySelectorAll('.targeting-btn');
   
   buttons.forEach(btn => {
@@ -773,4 +856,26 @@ function updateTowerShopDisplay() {
   const researchDamage = Math.floor(CONSTANTS.TOWER_TYPES.RESEARCH.damage * (1 + defenseBonuses.damageBonus / 100));
   const researchElement = document.getElementById('tower-research-damage');
   if (researchElement) researchElement.textContent = `${researchDamage} dégâts`;
+  
+  // Mettre à jour Electric
+  const electricDamage = Math.floor(CONSTANTS.TOWER_TYPES.ELECTRIC.damage * (1 + defenseBonuses.damageBonus / 100));
+  const electricElement = document.getElementById('tower-electric-damage');
+  if (electricElement) electricElement.textContent = `${electricDamage} dégâts`;
+}
+
+// Exposer towers et movingTower globalement pour les autres scripts
+window.towers = towers;
+window.movingTower = movingTower;
+
+function getTowers() {
+  return towers;
+}
+
+function getMovingTower() {
+  return movingTower;
+}
+
+function setMovingTower(tower) {
+  movingTower = tower;
+  window.movingTower = tower;
 }

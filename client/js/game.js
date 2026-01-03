@@ -17,6 +17,18 @@ function initGame(players) {
     gameContainer.innerHTML = '';
   }
   
+  // Réinitialiser le système de classes
+  if (typeof resetClassSystem === 'function') {
+    resetClassSystem();
+  }
+  
+  // Afficher le modal de sélection de classe
+  if (typeof showClassSelection === 'function') {
+    setTimeout(() => {
+      showClassSelection();
+    }, 500);
+  }
+  
   updateTargetPlayers(players);
 
   const config = {
@@ -82,13 +94,15 @@ function create() {
     }
     
     // Annuler le déplacement avec clic droit
-    if (pointer.rightButtonDown() && movingTower) {
-      movingTower.sprite.setAlpha(1);
+    const currentMovingTower = window.movingTower || movingTower;
+    if (pointer.rightButtonDown() && currentMovingTower) {
+      currentMovingTower.sprite.setAlpha(1);
       if (towerRangePreview) {
         towerRangePreview.destroy();
         towerRangePreview = null;
       }
       movingTower = null;
+      window.movingTower = null;
       showToast('❌ Déplacement annulé', 'info');
       return;
     }
@@ -103,7 +117,7 @@ function create() {
       placeTower(pointer.x, pointer.y);
     }
     // Si on est en mode déplacement de tour
-    else if (movingTower) {
+    else if (window.movingTower || movingTower) {
       moveTower(pointer.x, pointer.y);
     }
     // Sinon, vérifier si on clique sur un espace vide (pas sur une tour)
@@ -117,7 +131,9 @@ function create() {
 
   playerMoney = 500;
   playerHealth = 0;
+  window.playerHealth = 0; // Sync pour le système spectateur
   playerKills = 0;
+  playerAttackGold = 0; // Reset des golds d'attaque
   gameTime = 0;
   spawnUnitCapacity = 0;
   maxSpawnUnits = 5;
@@ -125,6 +141,7 @@ function create() {
   monsterHealthMultiplier = 1;
   rewardMultiplier = 1;
   towers = [];
+  window.towers = towers;
   monsters = [];
   
   // Initialiser le classement avec le joueur actuel
@@ -133,6 +150,7 @@ function create() {
       username: currentUser.username,
       health: 0,
       kills: 0,
+      attackGold: 0,
       isAlive: true
     }];
   }
@@ -148,16 +166,31 @@ function create() {
     loop: true
   });
 
-  // Spawn tous les 5 secondes
-  this.time.addEvent({
-    delay: 5000,
-    callback: () => {
-      if (gameTime >= 10) {
-        autoSpawnMonster();
-      }
-    },
-    loop: true
-  });
+  // Spawn dynamique - le délai change selon les vagues
+  let spawnEvent = null;
+  let lastSpawnDelay = 5000;
+  
+  const createSpawnEvent = (delay) => {
+    if (spawnEvent) {
+      spawnEvent.remove();
+    }
+    spawnEvent = this.time.addEvent({
+      delay: delay,
+      callback: () => {
+        if (gameTime >= 10) {
+          autoSpawnMonster();
+        }
+        // Vérifier si le délai a changé
+        if (currentSpawnDelay !== lastSpawnDelay) {
+          lastSpawnDelay = currentSpawnDelay;
+          createSpawnEvent(currentSpawnDelay);
+        }
+      },
+      loop: true
+    });
+  };
+  
+  createSpawnEvent(5000); // Démarre à 5 secondes
 
   // Nettoyage des projectiles orphelins (ceux qui sont restés bloqués)
   this.time.addEvent({
@@ -182,7 +215,8 @@ function create() {
 
 function update(time, delta) {
   // Mettre à jour la position du cercle de preview
-  if (towerRangePreview && (selectedTowerType || movingTower)) {
+  const currentMovingTower = window.movingTower || movingTower;
+  if (towerRangePreview && (selectedTowerType || currentMovingTower)) {
     const pointer = this.input.activePointer;
     // Snap sur la grille pour le preview
     const snapped = snapToGrid(pointer.x, pointer.y);
@@ -196,10 +230,19 @@ function update(time, delta) {
   towers.forEach(tower => {
     tower.cooldown--;
     if (tower.cooldown <= 0) {
-      const target = findClosestMonster(tower);
-      if (target) {
-        shootAtMonster(tower, target);
-        tower.cooldown = tower.fireRate / 16;
+      // Tour électrique : attaque multi-cibles
+      if (tower.id === 'electric') {
+        const targets = findMonstersInRange(tower, CONSTANTS.TOWER_TYPES.ELECTRIC.maxTargets || 10);
+        if (targets.length > 0) {
+          electricAttack(tower, targets);
+          tower.cooldown = tower.fireRate / 16;
+        }
+      } else {
+        const target = findClosestMonster(tower);
+        if (target) {
+          shootAtMonster(tower, target);
+          tower.cooldown = tower.fireRate / 16;
+        }
       }
     }
   });

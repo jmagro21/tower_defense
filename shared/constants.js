@@ -3,25 +3,25 @@
 module.exports = {
   // Configuration du jeu
   GAME: {
-    MAP_WIDTH: 800,
-    MAP_HEIGHT: 600,
+    MAP_WIDTH: 880,
+    MAP_HEIGHT: 680,
     GRID_SIZE: 40,
     MONSTER_PASS_LIMIT: 20
   },
 
-  // Définitions des maps
+  // Définitions des maps (ajustées pour 880x680 avec offset +40 sur x et y)
   MAPS: {
     STANDARD: {
       id: 'standard',
       name: 'Standard',
       description: 'Chemin simple en zigzag',
       path: [
-        { x: 0, y: 300 },
-        { x: 200, y: 300 },
-        { x: 200, y: 150 },
-        { x: 600, y: 150 },
-        { x: 600, y: 450 },
-        { x: 800, y: 450 }
+        { x: 0, y: 340 },
+        { x: 220, y: 340 },
+        { x: 220, y: 180 },
+        { x: 660, y: 180 },
+        { x: 660, y: 500 },
+        { x: 880, y: 500 }
       ]
     },
     SPIRAL: {
@@ -29,16 +29,16 @@ module.exports = {
       name: 'Spirale',
       description: 'Chemin en spirale',
       path: [
-        { x: 0, y: 300 },
-        { x: 150, y: 300 },
-        { x: 150, y: 150 },
-        { x: 650, y: 150 },
-        { x: 650, y: 450 },
-        { x: 50, y: 450 },
-        { x: 50, y: 200 },
-        { x: 750, y: 200 },
-        { x: 750, y: 400 },
-        { x: 800, y: 400 }
+        { x: 0, y: 340 },
+        { x: 180, y: 340 },
+        { x: 180, y: 180 },
+        { x: 700, y: 180 },
+        { x: 700, y: 500 },
+        { x: 100, y: 500 },
+        { x: 100, y: 260 },
+        { x: 780, y: 260 },
+        { x: 780, y: 420 },
+        { x: 880, y: 420 }
       ]
     },
     STRAIGHT: {
@@ -46,8 +46,9 @@ module.exports = {
       name: 'Droit',
       description: 'Chemin droit de haut en bas',
       path: [
-        { x: 400, y: 0 },
-        { x: 400, y: 600 }
+        { x: 420, y: 0 },
+        { x: 420, y: 340 },
+        { x: 420, y: 680 }
       ]
     },
     SERPENT: {
@@ -55,12 +56,12 @@ module.exports = {
       name: 'Serpent',
       description: 'Chemin sinueux',
       path: [
-        { x: 0, y: 100 },
-        { x: 250, y: 100 },
-        { x: 250, y: 500 },
-        { x: 550, y: 500 },
-        { x: 550, y: 150 },
-        { x: 800, y: 150 }
+        { x: 0, y: 140 },
+        { x: 300, y: 140 },
+        { x: 300, y: 540 },
+        { x: 580, y: 540 },
+        { x: 580, y: 180 },
+        { x: 880, y: 180 }
       ]
     }
   },
@@ -124,6 +125,19 @@ module.exports = {
       damageUpgrade: 1,
       fireRateUpgrade: -100,
       researchKillsPerHit: 1 // Génère des kills de recherche
+    },
+    ELECTRIC: {
+      id: 'electric',
+      name: 'Tour Électrique',
+      cost: 500,
+      damage: 15,
+      range: 180,
+      fireRate: 5000, // 5 secondes
+      upgradeCost: 150,
+      damageUpgrade: 8,
+      fireRateUpgrade: 0, // Pas d'amélioration de vitesse
+      maxTargets: 10, // Touche 10 mobs
+      stunDuration: 500 // 0.5 seconde de stun
     }
   },
 

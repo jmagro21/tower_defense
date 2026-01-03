@@ -279,11 +279,33 @@ function copyRoomCode() {
     showLobbyError('Aucun code de salon disponible');
     return;
   }
-  navigator.clipboard.writeText(currentRoomCode).then(() => {
+  
+  // Fallback pour les contextes non-sécurisés (http)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(currentRoomCode).then(() => {
+      showToast('Code copié dans le presse-papier ! 📋', 'success');
+    }).catch(() => {
+      fallbackCopyToClipboard(currentRoomCode);
+    });
+  } else {
+    fallbackCopyToClipboard(currentRoomCode);
+  }
+}
+
+function fallbackCopyToClipboard(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.select();
+  try {
+    document.execCommand('copy');
     showToast('Code copié dans le presse-papier ! 📋', 'success');
-  }).catch(() => {
+  } catch (err) {
     showLobbyError('Erreur lors de la copie du code');
-  });
+  }
+  document.body.removeChild(textArea);
 }
 
 function showLobbyError(message) {

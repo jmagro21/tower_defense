@@ -117,7 +117,7 @@ function setupGameEvents() {
       
       // Sauvegarder les données importantes de l'ancienne tour
       const savedData = {
-        targetMode: oldTower.targetMode || 'closest',
+        targetMode: oldTower.targetMode || 'nearest_end',
         abilities: oldTower.abilities || [],
         abilityIcons: oldTower.abilityIcons || []
       };
@@ -204,6 +204,7 @@ function setupGameEvents() {
     if (data.players) {
       playersStats = data.players;
       updateUI();
+      updateTargetPlayers(playersStats); // Ajouté pour forcer la mise à jour de la liste des cibles
     }
   });
 
@@ -211,6 +212,7 @@ function setupGameEvents() {
     if (data.players) {
       playersStats = data.players;
       updateUI();
+      updateTargetPlayers(playersStats); // Ajouté pour forcer la mise à jour de la liste des cibles
     }
   });
 
@@ -219,6 +221,44 @@ function setupGameEvents() {
     if (data.players) {
       playersStats = data.players;
       updateUI();
+      updateTargetPlayers(playersStats); // Ajouté pour forcer la mise à jour de la liste des cibles
     }
   });
+  
+  // ===== SYSTÈME SPECTATEUR =====
+  // Broadcast périodique des données de map pour le système de spectateur
+  setInterval(() => {
+    if (socket && socket.connected) {
+      broadcastMapState();
+    }
+  }, 500);
+}
+
+// Envoyer l'état de la map au serveur pour les spectateurs
+function broadcastMapState() {
+  if (!socket || !socket.connected) return;
+  
+  const towersList = window.towers || towers || [];
+  const monstersList = window.monsters || monsters || [];
+  const currentPath = window.path || path || [];
+  
+  const mapData = {
+    path: currentPath.map(p => ({ x: p.x, y: p.y })),
+    towers: towersList.map(t => ({
+      x: t.x,
+      y: t.y,
+      type: t.id || t.type || 'basic',
+      level: t.level || 1,
+      range: t.range || 100
+    })),
+    monsters: monstersList.map(m => ({
+      x: m.sprite ? m.sprite.x : m.x,
+      y: m.sprite ? m.sprite.y : m.y,
+      type: m.id || m.type || 'basic'
+    })),
+    // Ajouter la santé du joueur pour le système spectateur
+    health: window.playerHealth !== undefined ? window.playerHealth : playerHealth
+  };
+  
+  socket.emit('broadcastMapState', mapData);
 }

@@ -1,5 +1,6 @@
 // Gestion des monstres
 let monsters = [];
+let showMonsterAuras = true; // Afficher les cercles d'aura des monstres (buffer, bigboss)
 
 function spawnMonster(monsterData) {
   // Les données du monstre reçu contiennent déjà les bonus appliqués
@@ -231,6 +232,7 @@ function spawnMonster(monsterData) {
   if (monsterData.id === 'buffer') {
     const buffCircle = gameScene.add.circle(0, 0, CONSTANTS.MONSTER_TYPES.BUFFER.buffRadius, 0x2ecc71, 0.15);
     buffCircle.setStrokeStyle(2, 0x27ae60, 0.5);
+    buffCircle.setVisible(showMonsterAuras);
     container.add(buffCircle);
     monster.buffCircle = buffCircle;
   }
@@ -242,6 +244,7 @@ function spawnMonster(monsterData) {
     // Cercle de buff de vie (plus grand et menaçant)
     const buffCircle = gameScene.add.circle(0, 0, bigBossConfig.buffRadius, 0x6b3fa0, 0.12);
     buffCircle.setStrokeStyle(3, 0x4a2c7a, 0.4);
+    buffCircle.setVisible(showMonsterAuras);
     container.add(buffCircle);
     monster.buffCircle = buffCircle;
     monster.healthBuff = bigBossConfig.healthBuff;
@@ -492,7 +495,7 @@ function moveMonster(monster) {
 function findClosestMonster(tower) {
   // Vérifier si la tour a la compétence true_sight
   const hasTrueSight = tower.abilities && tower.abilities.includes('true_sight');
-  const targetMode = tower.targetMode || 'closest';
+  const targetMode = tower.targetMode || 'nearest_end';
 
   // Filtrer les monstres à portée
   const monstersInRange = monsters.filter(monster => {
@@ -559,11 +562,183 @@ function findClosestMonster(tower) {
       });
       break;
 
+    case 'most_hp': // Plus de HP (flat)
+      let maxHp = -1;
+      monstersInRange.forEach(monster => {
+        if (monster.currentHealth > maxHp) {
+          maxHp = monster.currentHealth;
+          target = monster;
+        }
+      });
+      break;
+
     default:
       target = monstersInRange[0];
   }
 
   return target;
+}
+
+// Trouver plusieurs monstres à portée (pour tour électrique)
+function findMonstersInRange(tower, maxTargets) {
+  const hasTrueSight = tower.abilities && tower.abilities.includes('true_sight');
+  
+  const monstersInRange = monsters.filter(monster => {
+    if (!monster.sprite || !monster.sprite.active) return false;
+    if (monster.isInvisible && !hasTrueSight) return false;
+    
+    const dx = monster.sprite.x - tower.x;
+    const dy = monster.sprite.y - tower.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return dist <= tower.range;
+  });
+  
+  // Trier par distance et prendre les X premiers
+  monstersInRange.sort((a, b) => {
+    const distA = Math.sqrt((a.sprite.x - tower.x) ** 2 + (a.sprite.y - tower.y) ** 2);
+    const distB = Math.sqrt((b.sprite.x - tower.x) ** 2 + (b.sprite.y - tower.y) ** 2);
+    return distA - distB;
+  });
+  
+  return monstersInRange.slice(0, maxTargets);
+}
+
+// Attaque électrique multi-cibles avec stun
+function electricAttack(tower, targets) {
+  if (tower.isStunned) return;
+  
+  const stunDuration = CONSTANTS.TOWER_TYPES.ELECTRIC.stunDuration || 500;
+  
+  // Effet visuel : éclairs partant de la tour vers chaque cible
+  targets.forEach(monster => {
+    if (!monster.sprite || !monster.sprite.active) return;
+    
+    // Créer un éclair (ligne)
+    const lightning = gameScene.add.graphics();
+    lightning.lineStyle(3, 0x00ffff, 1);
+    lightning.setDepth(100);
+    
+    // Dessiner un éclair en zigzag
+    const startX = tower.x;
+    const startY = tower.y;
+    const endX = monster.sprite.x;
+    const endY = monster.sprite.y;
+    
+    lightning.beginPath();
+    lightning.moveTo(startX, startY);
+    
+    // Points intermédiaires pour l'effet zigzag
+    const segments = 4;
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const x = startX + (endX - startX) * t + (Math.random() - 0.5) * 30;
+      const y = startY + (endY - startY) * t + (Math.random() - 0.5) * 30;
+      lightning.lineTo(x, y);
+    }
+    lightning.lineTo(endX, endY);
+    lightning.strokePath();
+    
+    // Effet de flash sur le monstre
+    const flash = gameScene.add.circle(monster.sprite.x, monster.sprite.y, 15, 0x00ffff, 0.6);
+    flash.setDepth(101);
+    
+    // Animation et destruction
+    gameScene.tweens.add({
+      targets: [lightning, flash],
+      alpha: 0,
+      duration: 200,
+      onComplete: () => {
+        lightning.destroy();
+        flash.destroy();
+      }
+    });
+    
+    // Infliger les dégâts
+    damageMonster(monster, tower.damage, tower);
+    
+    // Appliquer le stun au monstre
+    applyMonsterStun(monster, stunDuration);
+  });
+  
+  // Son/effet visuel sur la tour
+  if (gameScene) {
+    const shockwave = gameScene.add.circle(tower.x, tower.y, 20, 0x00ffff, 0.5);
+    shockwave.setDepth(99);
+    
+    gameScene.tweens.add({
+      targets: shockwave,
+      scale: 3,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => shockwave.destroy()
+    });
+  }
+}
+
+// Inflige des dégâts à un monstre et gère sa mort
+function damageMonster(monster, damage, tower) {
+  if (!monster || !monster.sprite || !monster.sprite.active) return;
+  monster.currentHealth -= damage;
+  if (monster.hpText) {
+    monster.hpText.setText(Math.max(0, Math.floor(monster.currentHealth)));
+  }
+  if (monster.healthBar) {
+    monster.healthBar.width = Math.max(0, 30 * (monster.currentHealth / monster.maxHealth));
+  }
+  if (monster.currentHealth <= 0) {
+    killMonster(monster, false, tower);
+  }
+}
+
+// Appliquer un stun à un monstre (le ralentit à 0)
+function applyMonsterStun(monster, duration) {
+  if (!monster || !monster.sprite || !monster.sprite.active) return;
+  
+  // Sauvegarder la vitesse originale si pas déjà fait
+  if (!monster.originalSpeed) {
+    monster.originalSpeed = monster.speed;
+  }
+  
+  // Stopper le monstre
+  monster.speed = 0;
+  monster.isStunned = true;
+  
+  // Effet visuel de stun
+  if (!monster.stunVisual && gameScene) {
+    const stunVisual = gameScene.add.text(0, -20, '⚡', {
+      fontSize: '14px'
+    });
+    stunVisual.setOrigin(0.5);
+    monster.sprite.add(stunVisual);
+    monster.stunVisual = stunVisual;
+    
+    // Animation de l'icône
+    gameScene.tweens.add({
+      targets: stunVisual,
+      y: -25,
+      duration: 200,
+      yoyo: true,
+      repeat: -1
+    });
+  }
+  
+  // Annuler le stun précédent si existant
+  if (monster.stunTimeout) {
+    clearTimeout(monster.stunTimeout);
+  }
+  
+  // Timer pour restaurer la vitesse
+  monster.stunTimeout = setTimeout(() => {
+    if (monster && monster.sprite && monster.sprite.active) {
+      monster.speed = monster.originalSpeed || monster.baseSpeed || 30;
+      monster.isStunned = false;
+      
+      if (monster.stunVisual) {
+        monster.stunVisual.destroy();
+        monster.stunVisual = null;
+      }
+    }
+  }, duration);
 }
 
 function shootAtMonster(tower, monster) {
@@ -1087,6 +1262,11 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
   const researchTowerForAnimation = monster.researchAssistTower || null;
   addResearchKill(researchBonus, researchTowerForAnimation);
   
+  // Passif classe Défense: recherche tous les 100 kills
+  if (typeof onMonsterKilled === 'function') {
+    onMonsterKilled();
+  }
+  
   updateUI();
 }
 
@@ -1114,10 +1294,16 @@ function monsterReachedEnd(monster) {
     } catch (e) {}
   }
 
-  playerHealth++;
+  // Passif classe Dernière Chance: dégâts réduits
+  let damageMultiplier = 1.0;
+  if (typeof getMonsterPassDamage === 'function') {
+    damageMultiplier = getMonsterPassDamage();
+  }
+  playerHealth += damageMultiplier;
+  window.playerHealth = playerHealth; // Sync pour le système spectateur
   updateUI();
 
-  socket.emit(CONSTANTS.SOCKET_EVENTS.MONSTER_PASSED);
+  socket.emit(CONSTANTS.SOCKET_EVENTS.MONSTER_PASSED, { damage: damageMultiplier });
 
   if (playerHealth >= gameSettings.maxHealth) {
     showToast('💀 Vous avez été éliminé !', 'error');

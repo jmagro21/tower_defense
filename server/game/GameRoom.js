@@ -20,7 +20,8 @@ class GameRoom {
       health: 0, // Monstres passés
       towers: [],
       isAlive: true,
-      kills: 0
+      kills: 0,
+      attackGold: 0 // Gold dépensé en attaque
     });
   }
 
@@ -34,7 +35,8 @@ class GameRoom {
       isAlive: p.isAlive,
       health: p.health,
       money: p.money,
-      kills: p.kills
+      kills: p.kills,
+      attackGold: p.attackGold || 0
     }));
   }
 

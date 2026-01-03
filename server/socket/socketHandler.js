@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const GameRoom = require('../game/GameRoom');
+const User = require('../models/User');
 const { SOCKET_EVENTS, TOWER_TYPES, MONSTER_TYPES } = require('../../shared/constants');
 
 const rooms = new Map(); // code -> GameRoom
@@ -432,6 +433,23 @@ module.exports = (io) => {
       });
     });
 
+    // Mise à jour des golds d'attaque
+    socket.on('UPDATE_ATTACK_GOLD', ({ attackGold }) => {
+      const roomCode = playerRooms.get(socket.id);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+
+      const player = room.players.get(socket.id);
+      if (player) {
+        player.attackGold = attackGold;
+        
+        // Envoyer les stats mises à jour de tous les joueurs
+        io.to(roomCode).emit('PLAYERS_STATS_UPDATE', {
+          players: room.getPlayerData()
+        });
+      }
+    });
+
     // Monstre passé
     socket.on(SOCKET_EVENTS.MONSTER_PASSED, () => {
       const roomCode = playerRooms.get(socket.id);
@@ -458,6 +476,14 @@ module.exports = (io) => {
           winner: winner?.username || 'Aucun',
           players: room.getPlayerData()
         });
+
+        // Incrémenter les victoires du gagnant dans MongoDB
+        if (winner?.username) {
+          User.findOneAndUpdate(
+            { username: winner.username },
+            { $inc: { 'stats.gamesWon': 1 } }
+          ).catch(err => console.error('Erreur mise à jour victoires:', err));
+        }
 
         // Retour au lobby après 5 secondes
         setTimeout(() => {
@@ -528,6 +554,70 @@ module.exports = (io) => {
       finalizeDisconnect(socket.id, roomCode, room);
     }
     
+    // ===== SYSTÈME SPECTATEUR =====
+    // Le client envoie ses données de map pour permettre le spectateur
+    socket.on('broadcastMapState', (data) => {
+      const roomCode = playerRooms.get(socket.id);
+      if (!roomCode) return;
+      
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      
+      const player = room.players.get(socket.id);
+      if (!player) return;
+      
+      // Stocker les données de map du joueur pour les spectateurs
+      player.mapState = {
+        path: data.path || [],
+        monsters: data.monsters || [],
+        towers: data.towers || [],
+        health: data.health !== undefined ? data.health : null
+      };
+    });
+    
+    // Demander à observer un autre joueur
+    socket.on('spectatePlayer', ({ username }) => {
+      const roomCode = playerRooms.get(socket.id);
+      if (!roomCode) return;
+      
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      
+      // Trouver le joueur cible par son username
+      let targetPlayer = null;
+      
+      for (const [socketId, player] of room.players) {
+        if (player.username === username) {
+          targetPlayer = player;
+          break;
+        }
+      }
+      
+      if (!targetPlayer) {
+        socket.emit('spectatorError', { message: 'Joueur non trouvé' });
+        return;
+      }
+      
+      // Utiliser les données stockées par broadcastMapState
+      const mapState = targetPlayer.mapState || {};
+      
+      const spectatorData = {
+        username: targetPlayer.username,
+        health: mapState.health !== null && mapState.health !== undefined ? mapState.health : (targetPlayer.passedMonsters || 0),
+        money: targetPlayer.money || 0,
+        path: mapState.path || [],
+        towers: mapState.towers || [],
+        monsters: mapState.monsters || []
+      };
+      
+      socket.emit('spectatorData', spectatorData);
+    });
+    
+    // Arrêter d'observer
+    socket.on('stopSpectating', () => {
+      // Rien de spécial côté serveur, le client gère l'arrêt
+    });
+    
     function finalizeDisconnect(socketId, roomCode, room) {
       room.removePlayer(socketId);
       
@@ -546,6 +636,14 @@ module.exports = (io) => {
             winner: winner?.username || 'Aucun',
             players: room.getPlayerData()
           });
+
+          // Incrémenter les victoires du gagnant dans MongoDB
+          if (winner?.username) {
+            User.findOneAndUpdate(
+              { username: winner.username },
+              { $inc: { 'stats.gamesWon': 1 } }
+            ).catch(err => console.error('Erreur mise à jour victoires:', err));
+          }
         }
       }
       playerRooms.delete(socketId);

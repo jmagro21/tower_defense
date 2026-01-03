@@ -158,10 +158,11 @@ function showResearchPointAnimation(points = 1, fromTower = null) {
 function completeResearch(category, research) {
   researchTree[category][research].level++;
   researchKills = 0;
-  currentResearch = null;
+  // Ne pas réinitialiser currentResearch, on garde la même recherche active
   
   const researchData = researchTree[category][research];
-  showToast(`🔬 Recherche ${researchData.name} complétée au niveau ${researchData.level} !`, 'success');
+  const newLevel = researchData.level;
+  showToast(`🔬 Recherche ${researchData.name} complétée au niveau ${newLevel} ! Niveau ${newLevel + 1} en cours...`, 'success');
   
   // Mettre à jour l'affichage des dégâts des tours si c'est une recherche de dégâts
   if (category === 'defense' && research === 'towerDamage') {

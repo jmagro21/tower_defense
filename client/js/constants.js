@@ -1,8 +1,8 @@
 // Importer les constantes du serveur
 const CONSTANTS = {
   GAME: {
-    MAP_WIDTH: 800,
-    MAP_HEIGHT: 600,
+    MAP_WIDTH: 880,
+    MAP_HEIGHT: 680,
     GRID_SIZE: 40,
     MONSTER_PASS_LIMIT: 20
   },
@@ -13,12 +13,12 @@ const CONSTANTS = {
       name: 'Standard',
       description: 'Chemin simple en zigzag',
       path: [
-        { x: 0, y: 300 },    // Entrée gauche (y=300 est aligné: 7*40+20=300)
-        { x: 180, y: 300 },  // 4*40+20=180
-        { x: 180, y: 140 },  // 3*40+20=140
-        { x: 620, y: 140 },  // 15*40+20=620
-        { x: 620, y: 460 },  // 11*40+20=460
-        { x: 800, y: 460 }   // Sortie droite
+        { x: 0, y: 340 },    // Entrée gauche (y=300+40)
+        { x: 220, y: 340 },  // 180+40
+        { x: 220, y: 180 },  // 140+40
+        { x: 660, y: 180 },  // 620+40
+        { x: 660, y: 500 },  // 460+40
+        { x: 880, y: 500 }   // Sortie droite
       ]
     },
     SPIRAL: {
@@ -26,16 +26,16 @@ const CONSTANTS = {
       name: 'Spirale',
       description: 'Chemin en spirale',
       path: [
-        { x: 0, y: 300 },    // Entrée gauche
-        { x: 140, y: 300 },  // 3*40+20=140
-        { x: 140, y: 140 },  // 3*40+20=140
-        { x: 660, y: 140 },  // 16*40+20=660
-        { x: 660, y: 460 },  // 11*40+20=460
-        { x: 60, y: 460 },   // 1*40+20=60
-        { x: 60, y: 220 },   // 5*40+20=220
-        { x: 740, y: 220 },  // 18*40+20=740
-        { x: 740, y: 380 },  // 9*40+20=380
-        { x: 800, y: 380 }   // Sortie droite
+        { x: 0, y: 340 },    // Entrée gauche
+        { x: 180, y: 340 },  // 140+40
+        { x: 180, y: 180 },  // 140+40
+        { x: 700, y: 180 },  // 660+40
+        { x: 700, y: 500 },  // 460+40
+        { x: 100, y: 500 },  // 60+40
+        { x: 100, y: 260 },  // 220+40
+        { x: 780, y: 260 },  // 740+40
+        { x: 780, y: 420 },  // 380+40
+        { x: 880, y: 420 }   // Sortie droite
       ]
     },
     STRAIGHT: {
@@ -43,9 +43,9 @@ const CONSTANTS = {
       name: 'Droit',
       description: 'Chemin droit de haut en bas',
       path: [
-        { x: 380, y: 0 },    // 9*40+20=380 - Entrée haut
-        { x: 380, y: 300 },  // Milieu
-        { x: 380, y: 600 }   // Sortie bas
+        { x: 420, y: 0 },    // 380+40 - Entrée haut
+        { x: 420, y: 340 },  // Milieu
+        { x: 420, y: 680 }   // Sortie bas
       ]
     },
     SERPENT: {
@@ -53,12 +53,12 @@ const CONSTANTS = {
       name: 'Serpent',
       description: 'Chemin sinueux',
       path: [
-        { x: 0, y: 100 },    // Entrée gauche (2*40+20=100)
-        { x: 260, y: 100 },  // 6*40+20=260
-        { x: 260, y: 500 },  // 12*40+20=500
-        { x: 540, y: 500 },  // 13*40+20=540
-        { x: 540, y: 140 },  // 3*40+20=140
-        { x: 800, y: 140 }   // Sortie droite
+        { x: 0, y: 140 },    // Entrée gauche (100+40)
+        { x: 300, y: 140 },  // 260+40
+        { x: 300, y: 540 },  // 500+40
+        { x: 580, y: 540 },  // 540+40
+        { x: 580, y: 180 },  // 140+40
+        { x: 880, y: 180 }   // Sortie droite
       ]
     }
   },
@@ -124,6 +124,19 @@ const CONSTANTS = {
       auraRadius: 150,
       slowPercent: 0.01, // 1% de ralentissement
       researchBonus: 1   // +1 point de recherche bonus si kill dans l'aura
+    },
+    ELECTRIC: {
+      id: 'electric',
+      name: 'Tour Électrique',
+      cost: 500,
+      damage: 15,
+      range: 180,
+      fireRate: 5000, // 5 secondes
+      upgradeCost: 150,
+      damageUpgrade: 8,
+      fireRateUpgrade: 0, // Pas d'amélioration de vitesse
+      maxTargets: 10, // Touche 10 mobs
+      stunDuration: 500 // 0.5 seconde de stun
     }
   },
 
