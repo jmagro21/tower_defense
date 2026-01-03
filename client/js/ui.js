@@ -583,23 +583,24 @@ function upgradeTowerFromList(index) {
     return;
   }
   
-  // Appliquer l'amélioration
+  // Sync with the latest tower state in case of bulk upgrades
+  const syncedLevel = tower.level || 1;
+  tower.level = syncedLevel + 1;
   playerMoney -= upgradeCost;
-  tower.level = currentLevel + 1;
-  
-  // Mettre à jour les stats de la tour
+
+  // Always recalculate stats from the new level
   const damageBonus = getDefenseBonuses().damageBonus;
   tower.damage = Math.floor(towerData.damage * (1 + (tower.level - 1) * 0.35) * (1 + damageBonus / 100));
-  
+
   const attackSpeedBonus = getDefenseBonuses().attackSpeedBonus;
   tower.fireRate = Math.floor(towerData.fireRate / (1 + (tower.level - 1) * 0.15) / (1 + attackSpeedBonus / 100));
-  
-  // Mettre à jour le label de niveau sur le sprite
+
+  // Update level label
   if (tower.levelText) {
     tower.levelText.setText(`Nv.${tower.level}`);
   }
-  
-  // Animation d'amélioration
+
+  // Upgrade animation
   if (tower.sprite && gameScene) {
     gameScene.tweens.add({
       targets: tower.sprite,
@@ -610,7 +611,7 @@ function upgradeTowerFromList(index) {
       ease: 'Power2'
     });
   }
-  
+
   showToast(`⬆️ Tour améliorée au niveau ${tower.level} !`, 'success');
   updateTowersPanelUI();
   updateUI();

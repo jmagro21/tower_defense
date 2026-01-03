@@ -71,10 +71,20 @@ function placeTower(x, y) {
   const towerData = CONSTANTS.TOWER_TYPES[selectedTowerType.toUpperCase()];
   if (!towerData) return;
 
+
   const maxTowers = getMaxTowerSize();
   if (towers.length >= maxTowers) {
     showToast(`Limite de ${maxTowers} tours atteinte !`, 'warning');
     return;
+  }
+
+  // Limite spécifique pour Tesla/ELECTRIC
+  if (selectedTowerType && selectedTowerType.toLowerCase() === 'electric') {
+    const teslaCount = towers.filter(t => (t.id || t.type) === 'electric').length;
+    if (teslaCount >= 6) {
+      showToast('Limite de 6 Tesla atteinte !', 'warning');
+      return;
+    }
   }
 
   if (playerMoney < towerData.cost) {
@@ -355,11 +365,10 @@ function openTowerMenu(towerData, container) {
   let newRange = currentRange;
   
   // Appliquer les améliorations selon le type de tour
-  // Bonus de cadence en flat: Rapide +0.20x, Basique +0.10x, Sniper +0.10x, Gold/Research: aucun
+  // Bonus de cadence en flat: Rapide +0.20x, Basique +0.10x, Sniper +0.10x, Gold/Research/Tesla: aucun
   if (selectedTower.id === 'basic') {
-    // Basique: dégats et +0.10x de cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-    const newMultiplier = currentMultiplier + 0.10 * (1 + defenseBonuses.attackSpeedBonus / 100);
+    const newMultiplier = currentMultiplier + 0.10 * (1 + getTowerAttackSpeedBonus(selectedTower.id) / 100);
     newFireRate = Math.max(200, Math.floor(1000 / newMultiplier));
   } else if (selectedTower.id === 'sniper') {
     // Sniper: niveau 1-5 = range et dégats, niveau 5+ = dégats et +0.10x cadence
@@ -369,16 +378,16 @@ function openTowerMenu(towerData, container) {
       newFireRate = currentFireRate;
     } else {
       newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-      const newMultiplier = currentMultiplier + 0.10 * (1 + defenseBonuses.attackSpeedBonus / 100);
+      const newMultiplier = currentMultiplier + 0.10 * (1 + getTowerAttackSpeedBonus(selectedTower.id) / 100);
       newFireRate = Math.max(500, Math.floor(1000 / newMultiplier));
     }
   } else if (selectedTower.id === 'rapid') {
     // Rapide: dégats et +0.20x de cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
-    const newMultiplier = currentMultiplier + 0.20 * (1 + defenseBonuses.attackSpeedBonus / 100);
+    const newMultiplier = currentMultiplier + 0.20 * (1 + getTowerAttackSpeedBonus(selectedTower.id) / 100);
     newFireRate = Math.max(100, Math.floor(1000 / newMultiplier));
-  } else if (selectedTower.id === 'gold' || selectedTower.id === 'research') {
-    // Gold et Research: seulement les dégats, pas de bonus de cadence
+  } else if (selectedTower.id === 'gold' || selectedTower.id === 'research' || selectedTower.id === 'electric') {
+    // Gold, Research et Tesla: seulement les dégats, pas de bonus de cadence
     newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
     newFireRate = currentFireRate;
   }
@@ -740,6 +749,12 @@ function upgradeTower() {
   const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
   const upgradeCost = Math.floor(baseUpgradeCost * (1 - totalReduction / 100));
   
+  // Limite de niveau max pour les tours
+  if ((selectedTower.level || 1) >= 50) {
+    showToast('Niveau max atteint (50) !', 'warning');
+    return;
+  }
+  
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');
     return;
@@ -861,6 +876,12 @@ function updateTowerShopDisplay() {
   const electricDamage = Math.floor(CONSTANTS.TOWER_TYPES.ELECTRIC.damage * (1 + defenseBonuses.damageBonus / 100));
   const electricElement = document.getElementById('tower-electric-damage');
   if (electricElement) electricElement.textContent = `${electricDamage} dégâts`;
+}
+
+// Utilitaire : bonus de vitesse d'attaque, 0 pour Tesla
+function getTowerAttackSpeedBonus(towerId) {
+  if (towerId === 'electric') return 0;
+  return getDefenseBonuses().attackSpeedBonus;
 }
 
 // Exposer towers et movingTower globalement pour les autres scripts

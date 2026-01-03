@@ -156,6 +156,12 @@ function showResearchPointAnimation(points = 1, fromTower = null) {
 
 // Compléter une recherche
 function completeResearch(category, research) {
+  // Limite de niveau max pour les recherches
+  if (researchTree[category][research].level >= 25) {
+    showToast('Niveau max de recherche atteint (25) !', 'warning');
+    return;
+  }
+  
   researchTree[category][research].level++;
   researchKills = 0;
   // Ne pas réinitialiser currentResearch, on garde la même recherche active

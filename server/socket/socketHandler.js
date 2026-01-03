@@ -387,29 +387,32 @@ module.exports = (io) => {
       // Vérifier que le joueur a assez d'argent et que le monstre existe
       const player = room.players.get(socket.id);
       const monsterConfig = MONSTER_TYPES[monsterType.toUpperCase()];
-      
-      if (!player || !monsterConfig || player.money < monsterConfig.cost) return;
+      if (!player || !monsterConfig || !monster) return;
 
-      // Déduire le coût du monstre
-      player.money -= monsterConfig.cost;
+      // Utiliser le coût envoyé par le client (avec bonus de recherche et réductions)
+      // Anti-cheat: ne pas accepter un coût inférieur à 50% du coût de base
+      const baseCost = monsterConfig.cost;
+      const minAllowedCost = Math.floor(baseCost * 0.5);
+      const clientCost = monster.cost || baseCost;
+      const finalCost = (clientCost >= minAllowedCost) ? clientCost : baseCost;
 
-      // Utiliser le monstre envoyé par le client (avec ses HP augmentés)
-      if (monster) {
-        // Trouver le socket du joueur cible
-        const targetSocket = Array.from(room.players.keys())
-          .find(sid => room.players.get(sid).username === targetPlayer);
+      if (player.money < finalCost) return;
+      player.money -= finalCost;
 
-        if (targetSocket) {
-          io.to(targetSocket).emit(SOCKET_EVENTS.MONSTER_SENT, {
-            monster,
-            sender: currentUser.username
-          });
-        }
+      // Envoyer le monstre au joueur cible
+      const targetSocket = Array.from(room.players.keys())
+        .find(sid => room.players.get(sid).username === targetPlayer);
 
-        socket.emit(SOCKET_EVENTS.MONEY_UPDATE, {
-          money: room.players.get(socket.id).money
+      if (targetSocket) {
+        io.to(targetSocket).emit(SOCKET_EVENTS.MONSTER_SENT, {
+          monster,
+          sender: currentUser.username
         });
       }
+
+      socket.emit(SOCKET_EVENTS.MONEY_UPDATE, {
+        money: room.players.get(socket.id).money
+      });
     });
 
     // Monstre tué

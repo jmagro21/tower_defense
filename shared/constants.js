@@ -132,7 +132,7 @@ module.exports = {
       cost: 500,
       damage: 15,
       range: 180,
-      fireRate: 5000, // 5 secondes
+      fireRate: 10000, // 0.1 attaque/sec = 10s entre chaque attaque
       upgradeCost: 150,
       damageUpgrade: 8,
       fireRateUpgrade: 0, // Pas d'amélioration de vitesse

@@ -201,9 +201,13 @@ function useActiveSkill() {
     showToast(`❌ Pas assez de dépenses d'attaque ! (${formatNumber(currentCost)} ⚔️ requis)`, 'error');
     return;
   }
-  
+
   const classData = PLAYER_CLASSES[playerClass];
-  
+
+  // Déduire le coût d'attaque
+  playerAttackGold -= currentCost;
+  if (playerAttackGold < 0) playerAttackGold = 0;
+
   // Appliquer l'effet selon la classe
   switch (playerClass) {
     case 'attack':
@@ -219,14 +223,18 @@ function useActiveSkill() {
       applyEngineerClassActive();
       break;
   }
-  
-  // Déduire le coût (le coût est symbolique basé sur l'attackGold dépensé)
-  // On ne déduit pas réellement car c'est basé sur les dépenses totales
+
   skillUsageCount++;
-  
+
   showToast(`⚡ ${classData.active.name} activé !`, 'success');
   showNotification(`⚡ ${classData.icon} ${classData.active.name} !`);
   updateSkillButton();
+  // Mettre à jour l'affichage de l'or d'attaque
+  if (typeof updateUI === 'function') updateUI();
+  // Envoyer la mise à jour au serveur si nécessaire
+  if (typeof socket !== 'undefined' && socket.emit) {
+    socket.emit('UPDATE_ATTACK_GOLD', { attackGold: playerAttackGold });
+  }
 }
 
 // === EFFETS ACTIFS ===
@@ -281,9 +289,8 @@ function applyLastChanceClassActive() {
         // Mettre à jour la barre de vie
         if (monster.healthBar) {
           const healthPercent = monster.currentHealth / monster.health;
-          monster.healthBar.clear();
-          monster.healthBar.fillStyle(0x00ff00);
-          monster.healthBar.fillRect(-15, -25, 30 * healthPercent, 4);
+          monster.healthBar.width = 30 * healthPercent;
+          monster.healthBar.setFillStyle(0x00ff00); // Optionnel: change la couleur
         }
       }
     });
@@ -300,26 +307,22 @@ function applyEngineerClassActive() {
     let upgradedCount = 0;
     
     towers.forEach(tower => {
-      const oldLevel = tower.level;
-      tower.level = Math.min(tower.level + 3, maxLevel);
-      
-      if (tower.level > oldLevel) {
+      const oldLevel = tower.level || 1;
+      const newLevel = Math.min(oldLevel + 3, maxLevel);
+      if (newLevel > oldLevel) {
+        tower.level = newLevel;
         upgradedCount++;
-        
-        // Recalculer les stats
-        const towerType = tower.type.toUpperCase();
+        // Always recalculate stats from the new level
+        const towerType = (tower.id || tower.type || 'basic').toUpperCase();
         const towerData = CONSTANTS.TOWER_TYPES[towerType];
         const damageBonus = getDefenseBonuses().damageBonus;
         const attackSpeedBonus = getDefenseBonuses().attackSpeedBonus;
-        
         tower.damage = Math.floor(towerData.damage * (1 + (tower.level - 1) * 0.35) * (1 + damageBonus / 100));
         tower.fireRate = Math.floor(towerData.fireRate / (1 + (tower.level - 1) * 0.15) / (1 + attackSpeedBonus / 100));
-        
-        // Mettre à jour le label
+        // Update level label
         if (tower.levelText) {
           tower.levelText.setText(`Nv.${tower.level}`);
         }
-        
         // Animation
         if (tower.sprite && gameScene) {
           gameScene.tweens.add({
@@ -333,7 +336,9 @@ function applyEngineerClassActive() {
         }
       }
     });
-    
+    // Force UI refresh after bulk upgrade
+    if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
+    if (typeof updateUI === 'function') updateUI();
     showToast(`🔧 ${upgradedCount} tours améliorées !`, 'success');
   } else {
     showToast('❌ Aucune tour sur le terrain !', 'error');
