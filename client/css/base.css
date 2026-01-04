@@ -1,0 +1,105 @@
+/* ========================================
+   STYLES DE BASE - Base styles
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button, select, input, a {
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 8px;
+  background: #222b3a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444e63;
+  border-radius: 4px;
+}
+
+/* Classes utilitaires */
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  display: none;
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
+}
+
+.screen.active {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes titan-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(142, 68, 173, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(142, 68, 173, 0.8), 0 0 25px rgba(243, 156, 18, 0.3);
+  }
+}
+
+@keyframes saboteur-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.8), 0 0 25px rgba(44, 62, 80, 0.3);
+  }
+}
+
+@keyframes skill-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(155, 89, 182, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.8);
+  }
+}

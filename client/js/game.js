@@ -37,6 +37,10 @@ function initGame(players) {
     height: CONSTANTS.GAME.MAP_HEIGHT,
     parent: 'game-container',
     backgroundColor: '#2d5016',
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     render: {
       pixelArt: true
     },
@@ -57,29 +61,33 @@ function initGame(players) {
     game.events.off('blur');
   }
   
-  // Mettre à jour l'affichage des dégâts des tours
-  updateTowerShopDisplay();
+  // Mettre à jour l'affichage des dégâts des tours (si la fonction existe)
+  if (typeof updateTowerShopDisplay === 'function') {
+    updateTowerShopDisplay();
+  }
 }
 
 function create() {
   gameScene = this;
   
-  // Arrière-plan
+  // Arrière-plan adaptatif
   const bg = this.add.graphics();
   bg.fillStyle(0x2d5016, 1);
-  bg.fillRect(0, 0, CONSTANTS.GAME.MAP_WIDTH, CONSTANTS.GAME.MAP_HEIGHT);
+  bg.fillRect(0, 0, this.scale.width, this.scale.height);
   
-  for (let i = 0; i < 100; i++) {
-    const x = Math.random() * CONSTANTS.GAME.MAP_WIDTH;
-    const y = Math.random() * CONSTANTS.GAME.MAP_HEIGHT;
+  // Ajouter des décorations (herbe) proportionnellement à la taille
+  const numDecorations = Math.floor((this.scale.width * this.scale.height) / 6000);
+  for (let i = 0; i < numDecorations; i++) {
+    const x = Math.random() * this.scale.width;
+    const y = Math.random() * this.scale.height;
     this.add.circle(x, y, 2, 0x3a6b1f, 0.3);
   }
 
   // Charger la map sélectionnée
-  setMap(selectedMap);
+  setMap(window.selectedMap || 'standard');
   createPath();
-  drawPath();
-  drawGrid();
+  drawPath(this);
+  drawGrid(this);
 
   this.input.on('pointerdown', (pointer) => {
     // Vérifier si un menu/modal est ouvert (ne pas traiter les clics)
@@ -140,8 +148,7 @@ function create() {
   monsterLevel = 1;
   monsterHealthMultiplier = 1;
   rewardMultiplier = 1;
-  towers = [];
-  window.towers = towers;
+  window.towers = [];
   monsters = [];
   
   // Initialiser le classement avec le joueur actuel
@@ -215,7 +222,7 @@ function create() {
 
 function update(time, delta) {
   // Mettre à jour la position du cercle de preview
-  const currentMovingTower = window.movingTower || movingTower;
+  const currentMovingTower = window.movingTower || (typeof movingTower !== 'undefined' ? movingTower : null);
   if (towerRangePreview && (selectedTowerType || currentMovingTower)) {
     const pointer = this.input.activePointer;
     // Snap sur la grille pour le preview
@@ -227,21 +234,24 @@ function update(time, delta) {
   }
   
   // Tir des tours
-  towers.forEach(tower => {
-    tower.cooldown--;
+  const towersList = window.towers || (typeof towers !== 'undefined' ? towers : []);
+  towersList.forEach(tower => {
+    // Décrémenter le cooldown en fonction du delta time (en ms)
+    // On normalise pour que le cooldown soit en ms au lieu de frames
+    tower.cooldown -= delta;
     if (tower.cooldown <= 0) {
       // Tour électrique : attaque multi-cibles
       if (tower.id === 'electric') {
         const targets = findMonstersInRange(tower, CONSTANTS.TOWER_TYPES.ELECTRIC.maxTargets || 10);
         if (targets.length > 0) {
           electricAttack(tower, targets);
-          tower.cooldown = tower.fireRate / 16;
+          tower.cooldown = tower.fireRate;
         }
       } else {
         const target = findClosestMonster(tower);
         if (target) {
           shootAtMonster(tower, target);
-          tower.cooldown = tower.fireRate / 16;
+          tower.cooldown = tower.fireRate;
         }
       }
     }
@@ -255,7 +265,7 @@ function update(time, delta) {
       continue;
     }
     
-    moveMonster(monster);
+    moveMonster(monster, delta);
     
     if (monster.pathIndex >= path.length) {
       monsterReachedEnd(monster);

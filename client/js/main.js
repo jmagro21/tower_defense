@@ -79,9 +79,6 @@ window.addEventListener('DOMContentLoaded', () => {
     towerMenu.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
     });
-    towerMenu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
   }
 
   // Même chose pour le modal de recherche
@@ -93,8 +90,22 @@ window.addEventListener('DOMContentLoaded', () => {
     researchModal.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
     });
-    researchModal.addEventListener('click', (e) => {
-      e.stopPropagation();
+  }
+
+  // Pour le modal de gestion des tours, empêcher la propagation seulement sur le fond
+  const towersModal = document.getElementById('towers-modal');
+  if (towersModal) {
+    towersModal.addEventListener('mousedown', (e) => {
+      // Ne bloquer que si on clique sur le fond du modal, pas sur son contenu
+      if (e.target === towersModal) {
+        e.stopPropagation();
+      }
+    });
+    towersModal.addEventListener('pointerdown', (e) => {
+      // Ne bloquer que si on clique sur le fond du modal, pas sur son contenu
+      if (e.target === towersModal) {
+        e.stopPropagation();
+      }
     });
   }
 });

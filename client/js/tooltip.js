@@ -255,15 +255,29 @@ function showMonsterTooltip(monsterType, x, y) {
 function positionTooltip(tooltip, x, y) {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
+  const tooltipWidth = 270;
+  const tooltipHeight = 320;
   
-  let left = x + 20;
-  let top = y + 20;
+  // Position de base : à droite et en bas du curseur
+  let left = x + 15;
+  let top = y + 15;
   
-  if (left + 270 > viewportWidth) left = x - 290;
-  if (top + 320 > viewportHeight) top = y - 340;
+  // Si déborde à droite, placer à gauche du curseur
+  if (left + tooltipWidth > viewportWidth - 20) {
+    left = x - tooltipWidth - 15;
+  }
   
-  tooltip.style.left = Math.max(10, left) + 'px';
-  tooltip.style.top = Math.max(10, top) + 'px';
+  // Si déborde en bas, placer au-dessus du curseur
+  if (top + tooltipHeight > viewportHeight - 20) {
+    top = y - tooltipHeight - 15;
+  }
+  
+  // S'assurer que le tooltip reste dans la fenêtre
+  left = Math.max(10, Math.min(left, viewportWidth - tooltipWidth - 10));
+  top = Math.max(10, Math.min(top, viewportHeight - tooltipHeight - 10));
+  
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
 }
 
 function hideTooltip() {

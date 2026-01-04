@@ -9,7 +9,26 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏰</text></svg>">
   <script src="/libs/phaser.min.js"></script>
   <script src="/libs/socket.io.min.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- CSS Files - Load order is important -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/lobby.css">
+  <link rel="stylesheet" href="css/game-layout.css">
+  <link rel="stylesheet" href="css/panels.css">
+  <link rel="stylesheet" href="css/towers.css">
+  <link rel="stylesheet" href="css/monsters.css">
+  <link rel="stylesheet" href="css/modals.css">
+  <link rel="stylesheet" href="css/research.css">
+  <link rel="stylesheet" href="css/classes.css">
+  <link rel="stylesheet" href="css/ui.css">
+  <link rel="stylesheet" href="css/music.css">
+  <link rel="stylesheet" href="css/tooltips.css">
+  <link rel="stylesheet" href="css/spectator.css">
+  <!-- Device-specific CSS -->
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/tablet.css">
+  <link rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
   <!-- Conteneur pour les notifications toast -->
@@ -74,11 +93,13 @@
 
     <!-- Écran de la salle d'attente -->
     <div id="room-screen" class="screen">
-      <div class="room-container">
+      <div class="waiting-room-container">
         <h1>Salle d'attente</h1>
-        <div class="room-info">
-          <div class="room-code">Code: <span id="room-code"></span></div>
-          <button onclick="copyRoomCode()">📋 Copier</button>
+        <div class="room-code">
+          <h3>Code du salon</h3>
+          <div class="room-code-display">
+            <div class="room-code-value" id="room-code" onclick="copyRoomCode()" title="Cliquer pour copier"></div>
+          </div>
         </div>
         <div class="players-list">
           <h3>Joueurs (<span id="player-count">0</span>)</h3>
@@ -198,12 +219,6 @@
 
         <!-- Centre: Jeu -->
         <div class="game-center">
-          <!-- Contrôles de musique en jeu -->
-          <div class="music-controls-ingame">
-            <input type="range" id="music-volume-slider-game" min="0" max="1" step="0.01" value="0.5" oninput="setMusicVolume(parseFloat(this.value))">
-            <button id="music-mute-btn-game" onclick="toggleMusicMute()" class="btn-music-mini">🔊</button>
-          </div>
-          
           <!-- Haut: Stats -->
           <div class="game-panel top-panel">
             <div class="stat-item">

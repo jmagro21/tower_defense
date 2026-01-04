@@ -107,7 +107,7 @@ function initSocket() {
     
     // Récupérer la map du serveur
     if (data.mapId) {
-      selectedMap = data.mapId;
+      window.selectedMap = data.mapId;
     }
     
     // Initialiser les stats des joueurs depuis le serveur
@@ -141,7 +141,7 @@ function initSocket() {
   });
 
   socket.on('MAP_CHANGED', (data) => {
-    selectedMap = data.mapId;
+    window.selectedMap = data.mapId;
     updateMapDisplay();
   });
 
@@ -340,13 +340,13 @@ function changeMap(mapId) {
 function updateMapDisplay() {
   const mapSelect = document.getElementById('map-select');
   if (mapSelect) {
-    mapSelect.value = selectedMap;
+    mapSelect.value = window.selectedMap || 'standard';
   }
   
   // Afficher le nom et la description de la map
   const mapName = document.getElementById('map-name');
   const mapDesc = document.getElementById('map-description');
-  const map = CONSTANTS.MAPS[selectedMap.toUpperCase()];
+  const map = CONSTANTS.MAPS[(window.selectedMap || 'standard').toUpperCase()];
   
   if (mapName && map) {
     mapName.textContent = map.name;

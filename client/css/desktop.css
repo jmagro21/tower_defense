@@ -1,0 +1,134 @@
+/* ========================================
+   DESKTOP - Styles spécifiques ordinateur
+   ======================================== */
+
+@media (min-width: 1025px) {
+  /* Auth screens */
+  .auth-container {
+    max-width: 450px;
+  }
+
+  /* Lobby */
+  .lobby-container,
+  .waiting-room-container {
+    max-width: 550px;
+  }
+
+  /* Game Layout - Optimized for desktop */
+  .game-wrapper {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .left-panel {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .right-panel {
+    width: 320px;
+    min-width: 320px;
+  }
+
+  /* Enhanced hover effects for desktop */
+  .tower-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+  }
+
+  .monster-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(234, 102, 102, 0.5);
+  }
+
+  .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Modals */
+  .modal-content {
+    max-width: 650px;
+  }
+
+  #researchModal .modal-content {
+    max-width: 850px;
+  }
+
+  #towersModal .modal-content {
+    max-width: 950px;
+  }
+
+  /* Research tree - More columns on desktop */
+  .research-tree {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  /* Tower menu */
+  .tower-menu {
+    min-width: 400px;
+  }
+
+  /* Leaderboard */
+  .leaderboard {
+    max-height: 450px;
+  }
+
+  /* Enhanced transitions for desktop */
+  .research-item:hover:not(.researched):not(.locked) {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  }
+
+  .tower-list-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(5px);
+    transition: all 0.2s;
+  }
+
+  /* Better scrollbars for desktop */
+  .modal-content::-webkit-scrollbar,
+  .leaderboard::-webkit-scrollbar,
+  .towers-list::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .modal-content::-webkit-scrollbar-thumb,
+  .leaderboard::-webkit-scrollbar-thumb,
+  .towers-list::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 5px;
+  }
+
+  .modal-content::-webkit-scrollbar-track,
+  .leaderboard::-webkit-scrollbar-track,
+  .towers-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Large desktop screens */
+@media (min-width: 1440px) {
+  .game-wrapper {
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .left-panel {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .right-panel {
+    width: 350px;
+    min-width: 350px;
+  }
+
+  #game-container {
+    border-radius: 12px;
+  }
+
+  .research-tree {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}

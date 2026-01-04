@@ -5,6 +5,10 @@ let pathCells = new Set(); // Cases occupées par le chemin
 let towerCells = new Set(); // Cases occupées par des tours
 
 function setMap(mapId) {
+  // Valeur par défaut si mapId n'est pas fourni
+  if (!mapId) {
+    mapId = 'standard';
+  }
   currentMap = CONSTANTS.MAPS[mapId.toUpperCase()] || CONSTANTS.MAPS.STANDARD;
   path = [...currentMap.path];
 }
@@ -26,7 +30,7 @@ function getCellKey(x, y) {
 function createPath() {
   // La path est définie au démarrage du jeu selon la map choisie
   // Utiliser la map globale sélectionnée (ne pas forcer 'standard')
-  setMap(selectedMap || 'standard');
+  setMap(window.selectedMap || 'standard');
   
   // Calculer les cases occupées par le chemin
   calculatePathCells();
@@ -84,8 +88,8 @@ function calculatePathCells() {
   }
 }
 
-function drawPath() {
-  const graphics = gameScene.add.graphics();
+function drawPath(scene) {
+  const graphics = scene.add.graphics();
   
   graphics.lineStyle(52, 0x654321, 1);
   graphics.beginPath();
@@ -104,12 +108,12 @@ function drawPath() {
     const p2 = path[i + 1];
     const midX = (p1.x + p2.x) / 2;
     const midY = (p1.y + p2.y) / 2;
-    gameScene.add.circle(midX, midY, 3, 0x654321, 0.3);
+    scene.add.circle(midX, midY, 3, 0x654321, 0.3);
   }
 }
 
-function drawGrid() {
-  const graphics = gameScene.add.graphics();
+function drawGrid(scene) {
+  const graphics = scene.add.graphics();
   const gridSize = CONSTANTS.GAME.GRID_SIZE;
   
   // Dessiner les cases

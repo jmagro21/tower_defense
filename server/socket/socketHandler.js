@@ -463,12 +463,14 @@ module.exports = (io) => {
     });
 
     // Monstre passé
-    socket.on(SOCKET_EVENTS.MONSTER_PASSED, () => {
+    socket.on(SOCKET_EVENTS.MONSTER_PASSED, (data) => {
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
 
-      const playerLost = room.monsterPassed(socket.id);
+      // Récupérer le multiplicateur de dégâts (0.85 pour lastchance, 1.0 par défaut)
+      const damageMultiplier = data && typeof data.damage === 'number' ? data.damage : 1.0;
+      const playerLost = room.monsterPassed(socket.id, damageMultiplier);
       
       // Envoyer les stats mises à jour de tous les joueurs
       io.to(roomCode).emit('PLAYERS_STATS_UPDATE', {

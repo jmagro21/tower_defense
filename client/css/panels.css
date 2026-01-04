@@ -1,0 +1,218 @@
+/* ========================================
+   LEADERBOARD & PANELS - Classement et panneaux droit
+   ======================================== */
+
+.right-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.right-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 0.95em;
+  color: #ffd700;
+}
+
+.panel-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #0f3460 0%, #ffd700 50%, #0f3460 100%);
+  margin: 8px 0;
+}
+
+/* Leaderboard */
+.leaderboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaderboard-item {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  border: 1px solid #667eea;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.leaderboard-item.spectatable {
+  cursor: pointer;
+}
+
+.leaderboard-item.spectatable:hover {
+  transform: translateX(3px);
+  border-color: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.leaderboard-item.alive {
+  border-color: #27ae60;
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.2) 0%, rgba(34, 153, 84, 0.2) 100%);
+}
+
+.leaderboard-item.eliminated {
+  border-color: #e74c3c;
+  opacity: 0.6;
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.2) 0%, rgba(192, 57, 43, 0.2) 100%);
+}
+
+.leaderboard-player-name {
+  font-weight: bold;
+  color: #ffd700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.leaderboard-player-name .status-icon {
+  font-size: 10px;
+}
+
+.leaderboard-player-name .spectate-icon {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.leaderboard-item.spectatable:hover .spectate-icon {
+  opacity: 1;
+}
+
+.leaderboard-player-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 11px;
+  color: #ddd;
+}
+
+.stat-gold {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.stat-life {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.stat-kills {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #27ae60;
+}
+
+/* Waves info */
+.waves-info {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.wave-display {
+  background: rgba(255, 215, 0, 0.1);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.wave-display h4 {
+  color: #ffd700;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.wave-number {
+  font-size: 24px;
+  color: white;
+  font-weight: bold;
+}
+
+.wave-enemies {
+  color: #aaa;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.wave-countdown {
+  background: rgba(52, 152, 219, 0.2);
+  border: 2px solid #3498db;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.countdown-text {
+  color: #3498db;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.countdown-value {
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* Send Monster Info */
+.send-monster-info {
+  background: rgba(234, 102, 102, 0.1);
+  border: 1px solid #ea6666;
+  border-radius: 8px;
+  padding: 10px;
+  color: white;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.send-monster-info strong {
+  color: #ea6666;
+}
+
+/* Ciblage */
+.target-label {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.target-select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 2px solid #0f3460;
+  background: #16213e;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.target-select:focus {
+  outline: none;
+  border-color: #667eea;
+}

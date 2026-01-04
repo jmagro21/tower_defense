@@ -119,11 +119,12 @@ class GameRoom {
     }
   }
 
-  monsterPassed(socketId) {
+  monsterPassed(socketId, damageMultiplier = 1.0) {
     const player = this.players.get(socketId);
     if (!player || !player.isAlive) return false;
 
-    player.health++;
+    // Appliquer le multiplicateur de dégâts (0.85 pour lastchance)
+    player.health += damageMultiplier;
     // Utiliser maxHealth du joueur ou des gameSettings, sinon valeur par défaut de 20
     const maxHealth = player.maxHealth || (this.gameSettings && this.gameSettings.maxHealth) || 20;
     if (player.health >= maxHealth) {

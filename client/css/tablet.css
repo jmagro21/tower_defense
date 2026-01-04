@@ -1,0 +1,86 @@
+/* ========================================
+   TABLETTE - Styles spécifiques tablette
+   ======================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Auth screens */
+  .auth-container {
+    max-width: 500px;
+  }
+
+  /* Lobby */
+  .lobby-container,
+  .waiting-room-container {
+    max-width: 600px;
+  }
+
+  /* Game Layout */
+  .game-wrapper {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .left-panel {
+    width: 250px;
+    min-width: 250px;
+  }
+
+  .right-panel {
+    width: 350px;
+    min-width: 350px;
+  }
+
+  /* Tower shop */
+  .tower-btn {
+    padding: 12px;
+  }
+
+  /* Modals */
+  .modal-content {
+    max-width: 700px;
+  }
+
+  /* Research */
+  .research-tree {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  /* Leaderboard */
+  .leaderboard {
+    max-height: 350px;
+  }
+}
+
+/* Tablette landscape */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .game-wrapper {
+    flex-direction: row;
+  }
+
+  .left-panel {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .right-panel {
+    width: 280px;
+    min-width: 280px;
+  }
+}
+
+/* Tablette portrait */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+  .game-wrapper {
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  #game-container {
+    min-height: 500px;
+  }
+}

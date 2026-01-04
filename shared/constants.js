@@ -74,10 +74,10 @@ module.exports = {
       cost: 100,
       damage: 10,
       range: 150,
-      fireRate: 1500, // ms
+      fireRate: 1000, // ms
       upgradeCost: 50,
       damageUpgrade: 3,
-      fireRateUpgrade: -150
+      fireRateUpgrade: -100
     },
     SNIPER: {
       id: 'sniper',
@@ -85,10 +85,10 @@ module.exports = {
       cost: 200,
       damage: 50,
       range: 300,
-      fireRate: 3000,
+      fireRate: 2000,
       upgradeCost: 100,
       damageUpgrade: 15,
-      fireRateUpgrade: -300
+      fireRateUpgrade: -200
     },
     RAPID: {
       id: 'rapid',
@@ -96,10 +96,10 @@ module.exports = {
       cost: 150,
       damage: 5,
       range: 120,
-      fireRate: 800,
+      fireRate: 500,
       upgradeCost: 75,
       damageUpgrade: 1.5,
-      fireRateUpgrade: -75
+      fireRateUpgrade: -50
     },
     GOLD: {
       id: 'gold',
@@ -107,10 +107,10 @@ module.exports = {
       cost: 250,
       damage: 8,
       range: 180,
-      fireRate: 2000,
+      fireRate: 1300,
       upgradeCost: 80,
       damageUpgrade: 2,
-      fireRateUpgrade: -150,
+      fireRateUpgrade: -100,
       goldRadius: 150,  // Rayon du halo d'or
       goldMultiplier: 2 // Multiplie les récompenses par 2
     },
@@ -120,10 +120,10 @@ module.exports = {
       cost: 300,
       damage: 3,
       range: 200,
-      fireRate: 1500,
+      fireRate: 1000,
       upgradeCost: 100,
       damageUpgrade: 1,
-      fireRateUpgrade: -100,
+      fireRateUpgrade: -80,
       researchKillsPerHit: 1 // Génère des kills de recherche
     },
     ELECTRIC: {
@@ -132,7 +132,7 @@ module.exports = {
       cost: 500,
       damage: 15,
       range: 180,
-      fireRate: 10000, // 0.1 attaque/sec = 10s entre chaque attaque
+      fireRate: 7000, // 0.14 attaque/sec = 7s entre chaque attaque
       upgradeCost: 150,
       damageUpgrade: 8,
       fireRateUpgrade: 0, // Pas d'amélioration de vitesse

@@ -107,6 +107,9 @@ function setupGameEvents() {
   socket.on('TOWER_MOVED', (data) => {
     playerMoney = data.money;
     
+    // Vérifier si la tour déplacée était sélectionnée
+    const wasSelected = selectedTower && selectedTower.x === data.oldX && selectedTower.y === data.oldY;
+    
     // Trouver la tour par son ancienne position
     const towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
     if (towerIndex !== -1) {
@@ -166,6 +169,12 @@ function setupGameEvents() {
               addAbilityIndicator(newTower, ability);
             }
           });
+        }
+        
+        // Si la tour était sélectionnée, mettre à jour selectedTower et rouvrir le menu
+        if (wasSelected) {
+          selectedTower = newTower;
+          openTowerMenu(newTower, newTower.sprite);
         }
       }
       
@@ -228,7 +237,8 @@ function setupGameEvents() {
   // ===== SYSTÈME SPECTATEUR =====
   // Broadcast périodique des données de map pour le système de spectateur
   setInterval(() => {
-    if (socket && socket.connected) {
+    // Ne broadcaster que si le jeu est actif et les variables sont initialisées
+    if (socket && socket.connected && typeof gameScene !== 'undefined' && gameScene !== null) {
       broadcastMapState();
     }
   }, 500);
@@ -238,9 +248,14 @@ function setupGameEvents() {
 function broadcastMapState() {
   if (!socket || !socket.connected) return;
   
-  const towersList = window.towers || towers || [];
-  const monstersList = window.monsters || monsters || [];
-  const currentPath = window.path || path || [];
+  // Vérifier que les variables existent avant de les utiliser
+  if (typeof towers === 'undefined' && typeof window.towers === 'undefined') return;
+  if (typeof monsters === 'undefined' && typeof window.monsters === 'undefined') return;
+  if (typeof path === 'undefined' && typeof window.path === 'undefined') return;
+  
+  const towersList = window.towers || (typeof towers !== 'undefined' ? towers : []);
+  const monstersList = window.monsters || (typeof monsters !== 'undefined' ? monsters : []);
+  const currentPath = window.path || (typeof path !== 'undefined' ? path : []);
   
   const mapData = {
     path: currentPath.map(p => ({ x: p.x, y: p.y })),

@@ -465,7 +465,7 @@ function spawnBossFromBigBoss(posX, posY, pathIndex, progress) {
   }
 }
 
-function moveMonster(monster) {
+function moveMonster(monster, delta = 16.67) {
   if (monster.pathIndex >= path.length) return;
 
   const current = path[monster.pathIndex];
@@ -475,8 +475,11 @@ function moveMonster(monster) {
   const dy = next.y - current.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
   
-  const speed = monster.speed / 60;
-  monster.progress += speed / distance;
+  // Calculer la vitesse en pixels par seconde, puis convertir en progression
+  // monster.speed est en pixels/seconde, delta est en millisecondes
+  // On divise par 1000 pour convertir delta en secondes
+  const pixelsToMove = (monster.speed * delta) / 1000;
+  monster.progress += pixelsToMove / distance;
 
   if (monster.progress >= 1) {
     monster.progress = 0;

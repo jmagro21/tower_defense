@@ -886,25 +886,29 @@ body {
 
 /* Panneau supérieur - Stats */
 .top-panel {
-  flex-direction: row;
-  gap: 10px;
+  flex-direction: row !important;
+  gap: 8px;
   height: auto;
-  padding: 12px;
+  padding: 10px 15px;
   align-items: center;
   border: none;
   background: #0f3460;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-y: visible;
+  overflow-x: auto;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #16213e;
-  padding: 8px 12px;
+  gap: 6px;
+  background: rgba(15, 52, 96, 0.6);
+  padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #0f3460;
-  flex: 1;
-  min-width: 100px;
+  min-width: auto;
+  white-space: nowrap;
 }
 
 .stat-icon {
@@ -913,12 +917,13 @@ body {
 
 .stat-content {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #aaa;
   text-transform: uppercase;
 }
@@ -1549,7 +1554,7 @@ body {
   background: rgba(0, 0, 0, 0.6);
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 9999;
   animation: fadeIn 0.3s ease;
 }
 
@@ -1568,6 +1573,8 @@ body {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   color: #ecf0f1;
+  position: relative;
+  z-index: 1;
 }
 
 .towers-header-modal {
@@ -1577,12 +1584,14 @@ body {
   margin-bottom: 20px;
   border-bottom: 2px solid #5a4a2a;
   padding-bottom: 15px;
+  flex-shrink: 0; /* Empêcher le rétrécissement */
 }
 
 .towers-header-modal h2 {
   color: #ffd700;
   font-size: 1.6em;
   margin: 0;
+  flex: 1; /* Permettre au titre de prendre l'espace disponible */
 }
 
 .towers-list-content {
@@ -1806,11 +1815,18 @@ body {
   cursor: pointer;
   font-size: 20px;
   transition: all 0.3s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
 }
 
 .btn-close-modal:hover {
   background: #c0392b;
   transform: rotate(90deg);
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
 }
 
 .research-content {
@@ -2378,10 +2394,21 @@ body {
   }
 }
 
-/* Téléphones - Portrait */
-@media screen and (max-width: 768px) {
-  body {
-    align-items: flex-start;
+/* Fix global pour les interactions tactiles */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.tower-btn,
+.monster-btn,
+select,
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer;
+}
+
+/* ========== TOOLTIP INFO SYSTEM ========== */
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -2408,6 +2435,23 @@ body {
   .auth-container h1 {
     font-size: 1.5em;
     margin-bottom: 20px;
+  }
+  
+  /* Modal - Simple sizing pour petits écrans */
+  .towers-modal-content {
+    width: 95%;
+    max-width: 95%;
+    max-height: 90vh;
+    padding: 15px;
+  }
+  
+  .towers-table {
+    font-size: 0.85em;
+  }
+  
+  .towers-table th,
+  .towers-table td {
+    padding: 8px 5px;
   }
   
   /* Lobby */

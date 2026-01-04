@@ -1,0 +1,152 @@
+/* ========================================
+   MUSIQUE - Contr\u00f4les audio
+   ======================================== */
+
+.music-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.music-controls label {
+  color: #333;
+  font-weight: bold;
+}
+
+.music-controls input[type="range"] {
+  width: 100%;
+  max-width: 300px;
+  height: 8px;
+  border-radius: 4px;
+  background: #e0e0e0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.music-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.music-controls input[type="range"]::-webkit-slider-thumb:hover {
+  background: #5568d3;
+  transform: scale(1.1);
+}
+
+.music-controls input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.music-controls input[type="range"]::-moz-range-thumb:hover {
+  background: #5568d3;
+  transform: scale(1.1);
+}
+
+.btn-music {
+  padding: 12px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.btn-music:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.btn-music.muted {
+  background: #e74c3c;
+}
+
+.btn-music.muted:hover {
+  background: #c0392b;
+}
+
+/* Contr\u00f4les de musique en jeu (version compacte) */
+.music-controls-ingame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.music-controls-ingame input[type="range"] {
+  width: 100px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.music-controls-ingame input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.music-controls-ingame input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.music-controls-ingame input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.music-controls-ingame input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+.btn-music-mini {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.btn-music-mini:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.btn-music-mini.muted {
+  background: rgba(231, 76, 60, 0.6);
+}

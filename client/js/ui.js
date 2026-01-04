@@ -15,7 +15,9 @@ let gameSettings = {
 
 function updateUI() {
   document.getElementById('money').textContent = playerMoney;
-  document.getElementById('health').textContent = gameSettings.maxHealth - playerHealth;
+  // Arrondir les HP et garder le format "xx."
+  const remainingHealth = Math.ceil(gameSettings.maxHealth - playerHealth);
+  document.getElementById('health').textContent = remainingHealth + '.';
   
   const minutes = Math.floor(gameTime / 60);
   const seconds = gameTime % 60;
@@ -493,7 +495,13 @@ function updateTowersPanelUI() {
       engineerDiscount = getEngineerUpgradeDiscount();
     }
     const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
-    let upgradeCost = Math.floor(towerData.upgradeCost * level * (1 - totalReduction / 100));
+    
+    // Utiliser la fonction getTowerUpgradeCost pour calculer le coût (multiplicateur tous les 5 niveaux)
+    const baseCost = typeof getTowerUpgradeCost === 'function' 
+      ? getTowerUpgradeCost(towerData.upgradeCost, level)
+      : towerData.upgradeCost * level;
+    
+    let upgradeCost = Math.floor(baseCost * (1 - totalReduction / 100));
     
     // Mode de ciblage actuel
     const targetMode = tower.targetMode || 'nearest_end';

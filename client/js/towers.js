@@ -1,5 +1,24 @@
+// Fonction pour calculer le coût d'amélioration d'une tour
+function getTowerUpgradeCost(baseUpgradeCost, currentLevel) {
+  const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
+  return baseUpgradeCost * multiplier;
+}
+
+// Gestion des tours - DÉCLARER LES VARIABLES D'ABORD
+let selectedTowerType = null;
+let towers = [];
+window.towers = towers; // Rendre accessible globalement
+let selectedTower = null;
+let towerRangePreview = null; // Cercle de preview pour la portée
+let movingTower = null; // Tour en cours de déplacement
+window.movingTower = movingTower; // Rendre accessible globalement
+const MOVE_TOWER_COST = 25; // Coût pour déplacer une tour
+let towerClickHandled = false; // Drapeau pour éviter la fermeture immédiate du menu
+let showRangeCircles = false; // Afficher les cercles de portée de toutes les tours
+
 // Réception de l'amélioration (serveur -> client)
-if (typeof socket !== 'undefined') {
+// Attendre que socket soit disponible
+if (typeof socket !== 'undefined' && socket !== null) {
   socket.on('TOWER_UPGRADED', ({ tower, money, upgradeCost }) => {
     // Mettre à jour la tour locale
     const idx = towers.findIndex(t => t.x === tower.x && t.y === tower.y);
@@ -17,16 +36,6 @@ if (typeof socket !== 'undefined') {
     showToast('Tour améliorée !', 'success');
   });
 }
-import { getTowerUpgradeCost } from './upgradeUtils.js';
-// Gestion des tours
-let selectedTowerType = null;
-let towers = [];
-let selectedTower = null;
-let towerRangePreview = null; // Cercle de preview pour la portée
-let movingTower = null; // Tour en cours de déplacement
-const MOVE_TOWER_COST = 25; // Coût pour déplacer une tour
-let towerClickHandled = false; // Drapeau pour éviter la fermeture immédiate du menu
-let showRangeCircles = false; // Afficher les cercles de portée de toutes les tours
 
 function selectTower(towerType, evt) {
   // Empêcher la propagation sur mobile
@@ -741,6 +750,9 @@ function moveTower(x, y) {
     towerRangePreview.destroy();
     towerRangePreview = null;
   }
+  
+  // Mettre à jour selectedTower pour pointer vers la tour déplacée
+  selectedTower = movingTower;
   
   showToast(`✅ Tour déplacée ! (-${MOVE_TOWER_COST} 💰)`, 'success');
   

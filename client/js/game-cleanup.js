@@ -13,24 +13,31 @@ function returnToLobby() {
   }
   
   gameScene = null;
-  towers = [];
-  window.towers = towers;
-  monsters = [];
-  path = [];
+  if (typeof towers !== 'undefined') {
+    towers = [];
+    window.towers = towers;
+  }
+  if (typeof monsters !== 'undefined') {
+    monsters = [];
+  }
+  if (typeof path !== 'undefined') {
+    path = [];
+  }
   pathCells.clear();
   towerCells.clear();
   
   // Nettoyer le preview de range et la tour en déplacement
-  if (towerRangePreview) {
+  if (typeof towerRangePreview !== 'undefined' && towerRangePreview) {
     towerRangePreview = null;
   }
-  if (movingTower) {
+  if (typeof movingTower !== 'undefined' && movingTower) {
     movingTower = null;
     window.movingTower = null;
   }
   
   // Nettoyer les effets de stun
-  towers.forEach(tower => {
+  const towersList = window.towers || (typeof towers !== 'undefined' ? towers : []);
+  towersList.forEach(tower => {
     if (tower.stunEffect) {
       tower.stunEffect = null;
     }

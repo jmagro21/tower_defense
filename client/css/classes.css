@@ -1,0 +1,177 @@
+/* ========================================
+   CLASSES - Sélection de classe et compétences
+   ======================================== */
+
+/* Modal Sélection de Classe */
+.class-modal {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  animation: fadeIn 0.3s ease;
+}
+
+.class-modal.hidden {
+  display: none !important;
+}
+
+.class-modal-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 3px solid #ffd700;
+  padding: 30px;
+  border-radius: 20px;
+  max-width: 1000px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+  color: #ecf0f1;
+}
+
+.class-header-modal {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.class-header-modal h2 {
+  color: #ffd700;
+  font-size: 2em;
+  margin: 0 0 10px 0;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.class-subtitle {
+  color: #bdc3c7;
+  font-size: 1.1em;
+  margin: 0;
+}
+
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.class-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%);
+  border: 2px solid var(--class-color, #666);
+  border-radius: 15px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.class-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 20px var(--class-color);
+  border-color: var(--class-color);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.3) 100%);
+}
+
+.class-icon {
+  font-size: 3em;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 10px var(--class-color));
+}
+
+.class-name {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: var(--class-color);
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px var(--class-color);
+}
+
+.class-description {
+  font-size: 0.9em;
+  color: #bdc3c7;
+  margin-bottom: 15px;
+  min-height: 40px;
+}
+
+.class-abilities {
+  text-align: left;
+}
+
+.class-ability {
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.class-ability:last-child {
+  margin-bottom: 0;
+}
+
+.ability-type {
+  display: block;
+  font-weight: bold;
+  color: #ffd700;
+  font-size: 0.85em;
+  margin-bottom: 3px;
+}
+
+.ability-name {
+  display: block;
+  color: #fff;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.ability-desc {
+  display: block;
+  font-size: 0.8em;
+  color: #95a5a6;
+  line-height: 1.3;
+}
+
+.active-ability {
+  border-left: 3px solid #e74c3c;
+}
+
+.passive-ability {
+  border-left: 3px solid #3498db;
+}
+
+/* Bouton Compétence de Classe */
+.btn-skill {
+  position: relative;
+  z-index: 1;
+  padding: 8px 15px;
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+  border: 2px solid #af7ac5;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+  animation: skill-pulse 2s infinite;
+}
+
+.btn-skill:hover:not(.disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(155, 89, 182, 0.6);
+}
+
+.btn-skill.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.btn-skill .skill-cost {
+  font-size: 0.85em;
+  opacity: 0.9;
+}
