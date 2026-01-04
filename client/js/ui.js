@@ -485,7 +485,7 @@ function updateTowersPanelUI() {
     
     const icon = towerTypeIcons[towerTypeKey] || '🔵';
     const level = tower.level || 1;
-    const maxLevel = getMaxTowerSize();
+    const maxLevel = (tower.id === 'gold' || tower.id === 'research') ? 20 : getMaxTowerSize();
     const isMaxLevel = level >= maxLevel;
     
     // Calcul du coût d'amélioration avec passif ingénieur
@@ -570,10 +570,11 @@ function upgradeTowerFromList(index) {
     tower.level = 1;
   }
   
-  const maxLevel = getMaxTowerSize();
+  // Limite spéciale pour gold et research : niveau 20 max
+  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : getMaxTowerSize();
   const currentLevel = tower.level;
   
-  if (currentLevel >= maxLevel) {
+  if (currentLevel >= maxLevelForType) {
     showToast('❌ Cette tour est au niveau maximum !', 'error');
     return;
   }

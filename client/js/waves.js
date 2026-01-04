@@ -43,7 +43,7 @@ function updateGameTime() {
   if (gameTime === 45) {
     maxSpawnUnits = 10; // Augmente après 45s
     monsterHealthMultiplier = 1.2 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel = 2;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 2 ! Les Tanks arrivent !');
@@ -52,7 +52,7 @@ function updateGameTime() {
   if (gameTime === 75) {
     maxSpawnUnits = 15; // Augmente après 75s
     monsterHealthMultiplier = 1.4 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel = 3;
     updateMonsterHPDisplay();
     showNotification('🔥 Vague 3 ! Les Rapides et Diviseurs arrivent !');
@@ -61,7 +61,7 @@ function updateGameTime() {
   if (gameTime === 105) {
     maxSpawnUnits = 20; // Augmente après 105s
     monsterHealthMultiplier = 1.6 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel = 4;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 4 ! Préparez-vous !');
@@ -70,7 +70,7 @@ function updateGameTime() {
   if (gameTime === 315) {
     maxSpawnUnits += 5;
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel = 10;
     updateMonsterHPDisplay();
     showNotification('💀 Manche 10 ! Les BOSS arrivent enfin !');
@@ -79,7 +79,7 @@ function updateGameTime() {
   if (gameTime > 105 && gameTime < 315 && gameTime % 30 === 0) {
     maxSpawnUnits += 2; // Augmentation plus faible avant les boss
     monsterHealthMultiplier += 0.1 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);
@@ -88,7 +88,7 @@ function updateGameTime() {
   if (gameTime > 315 && gameTime % 30 === 0) {
     maxSpawnUnits += 5; // Augmente plus rapidement après les boss
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
-    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
+    // rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);

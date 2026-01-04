@@ -149,7 +149,7 @@ module.exports = {
       cost: 50,
       health: 100,
       speed: 35,
-      reward: 25
+      reward: 20
     },
     TANK: {
       id: 'tank',
@@ -157,7 +157,7 @@ module.exports = {
       cost: 150,
       health: 300,
       speed: 20,
-      reward: 75
+      reward: 55
     },
     FAST: {
       id: 'fast',
@@ -165,7 +165,7 @@ module.exports = {
       cost: 100,
       health: 50,
       speed: 60,
-      reward: 40
+      reward: 30
     },
     BOSS: {
       id: 'boss',
@@ -173,7 +173,7 @@ module.exports = {
       cost: 300,
       health: 1000,
       speed: 10,
-      reward: 200
+      reward: 150
     },
     BIGBOSS: {
       id: 'bigboss',
@@ -181,7 +181,7 @@ module.exports = {
       cost: 10000,
       health: 15000,
       speed: 8,
-      reward: 2000,
+      reward: 1500,
       isInvisible: true,       // Invisible
       stunDuration: 3000,      // Paralyse pendant 3s
       maxStuns: 5,             // Paralyse les 5 premières tours
@@ -197,7 +197,7 @@ module.exports = {
       cost: 120,
       health: 150,
       speed: 40,
-      reward: 50,
+      reward: 40,
       canSplit: true  // Indique que ce monstre peut se diviser
     },
     BUFFER: {
@@ -206,7 +206,7 @@ module.exports = {
       cost: 200,
       health: 200,
       speed: 25,
-      reward: 80,
+      reward: 60,
       buffRadius: 100,  // Rayon du buff en pixels
       healthBuff: 1.5   // Multiplie la vie par 1.5 (50% de boost)
     },
@@ -216,7 +216,7 @@ module.exports = {
       cost: 180,
       health: 180,
       speed: 35,
-      reward: 70,
+      reward: 55,
       stunDuration: 2000,  // Durée du stun en ms
       maxStuns: 2          // Nombre max de tours à stun
     },
@@ -226,7 +226,7 @@ module.exports = {
       cost: 250,
       health: 120,
       speed: 45,
-      reward: 90,
+      reward: 70,
       isInvisible: true    // Invisible, seules les tours avec true_sight peuvent l'attaquer
     }
   },

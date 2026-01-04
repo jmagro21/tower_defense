@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/music.css">
   <link rel="stylesheet" href="css/tooltips.css">
   <link rel="stylesheet" href="css/spectator.css">
+  <link rel="stylesheet" href="css/level-selector.css">
   <!-- Device-specific CSS -->
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/tablet.css">
@@ -419,6 +420,26 @@
               <div class="stat-col">
                 <span class="stat-label">Après amélioration</span>
                 <span id="tower-menu-gold-next" class="stat-value upgrade">x2.0</span>
+              </div>
+            </div>
+            
+            <!-- Sélecteur de niveau cible (seulement pour tours de dégâts) -->
+            <div id="tower-level-selector" class="level-selector-container" style="display: none;">
+              <label for="target-level-input" class="level-selector-label">
+                <span>🎯 Niveau cible:</span>
+              </label>
+              <div class="level-selector-controls">
+                <input type="number" id="target-level-input" min="1" max="50" value="1" class="level-input">
+                <button onclick="calculateMultiUpgradeCost()" class="btn-calculate">💰 Calculer</button>
+              </div>
+              <div id="multi-upgrade-info" class="multi-upgrade-info" style="display: none;">
+                <div class="upgrade-cost-display">
+                  <span>Coût total:</span>
+                  <span id="multi-upgrade-total-cost" class="cost-value">0 💰</span>
+                </div>
+                <button onclick="upgradeToLevel()" class="btn-action btn-upgrade-multi">
+                  ⚡ Améliorer au niveau <span id="multi-target-level">1</span>
+                </button>
               </div>
             </div>
             

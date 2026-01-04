@@ -1221,24 +1221,26 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
   // Calculer la récompense avec les tours dorées
   let finalReward = monster.reward;
   
-  // Vérifier si le monstre est dans une aura dorée
-  for (const tower of towers) {
-    if (tower.id === 'gold' && tower.goldAura) {
-      const dist = Phaser.Math.Distance.Between(
-        monster.sprite.x, 
-        monster.sprite.y,
-        tower.x,
-        tower.y
-      );
-      
-      const goldRadius = CONSTANTS.TOWER_TYPES.GOLD.goldRadius || 150;
-      if (dist <= goldRadius) {
-        // Bonus d'or de base (100%) + 20% tous les 5 niveaux
-        const towerLevel = tower.level || 1;
-        const bonusLevels = Math.floor(towerLevel / 5);
-        const goldMultiplier = (CONSTANTS.TOWER_TYPES.GOLD.goldMultiplier || 2) + (bonusLevels * 0.2);
-        finalReward = Math.floor(finalReward * goldMultiplier);
-        break; // Un seul bonus même si plusieurs tours dorées
+  // Vérifier si le monstre est dans une aura dorée (uniquement si le sprite est encore actif)
+  if (monster.sprite && monster.sprite.active) {
+    for (const tower of towers) {
+      if (tower.id === 'gold' && tower.goldAura) {
+        const dist = Phaser.Math.Distance.Between(
+          monster.sprite.x, 
+          monster.sprite.y,
+          tower.x,
+          tower.y
+        );
+        
+        const goldRadius = CONSTANTS.TOWER_TYPES.GOLD.goldRadius || 150;
+        if (dist <= goldRadius) {
+          // Bonus d'or de base (100%) + 20% tous les 5 niveaux
+          const towerLevel = tower.level || 1;
+          const bonusLevels = Math.floor(towerLevel / 5);
+          const goldMultiplier = (CONSTANTS.TOWER_TYPES.GOLD.goldMultiplier || 2) + (bonusLevels * 0.2);
+          finalReward = Math.floor(finalReward * goldMultiplier);
+          break; // Un seul bonus même si plusieurs tours dorées
+        }
       }
     }
   }
@@ -1255,14 +1257,31 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
   // et enverra les stats via PLAYERS_STATS_UPDATE
   
   // Progression de la recherche en cours (tous les kills donnent +1)
-  // Si le monstre était dans l'aura d'un laboratoire, bonus supplémentaire basé sur le niveau
+  // Vérifier si le monstre est ACTUELLEMENT dans l'aura d'un laboratoire au moment de sa mort
   let researchBonus = 0;
-  if (monster.researchAssistTower) {
-    const labLevel = monster.researchAssistTower.level || 1;
-    // +1 bonus de base, puis +1 supplémentaire tous les 5 niveaux
-    researchBonus = 1 + Math.floor(labLevel / 5);
+  let researchTowerForAnimation = null;
+  
+  if (monster.sprite && monster.sprite.active) {
+    const auraRadius = CONSTANTS.TOWER_TYPES.RESEARCH.auraRadius || 150;
+    
+    // Vérifier la distance avec chaque tour de recherche
+    for (const tower of towers) {
+      if (tower.id === 'research' && tower.sprite && tower.sprite.active) {
+        const dx = monster.sprite.x - tower.x;
+        const dy = monster.sprite.y - tower.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance <= auraRadius) {
+          const labLevel = tower.level || 1;
+          // +1 bonus de base, puis +1 supplémentaire tous les 5 niveaux
+          researchBonus = 1 + Math.floor(labLevel / 5);
+          researchTowerForAnimation = tower;
+          break; // Un seul bonus même si plusieurs tours de recherche
+        }
+      }
+    }
   }
-  const researchTowerForAnimation = monster.researchAssistTower || null;
+  
   addResearchKill(researchBonus, researchTowerForAnimation);
   
   // Passif classe Défense: recherche tous les 100 kills

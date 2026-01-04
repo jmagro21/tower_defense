@@ -325,6 +325,88 @@ module.exports = (io) => {
       });
     });
 
+    // Améliorer une tour directement à un niveau spécifique
+    socket.on('UPGRADE_TOWER_MULTI', ({ x, y, targetLevel }) => {
+      const roomCode = playerRooms.get(socket.id);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+
+      const player = room.players.get(socket.id);
+      if (!player) return;
+
+      const tower = player.towers.find(t => t.x === x && t.y === y);
+      if (!tower) return;
+
+      // Ne permettre que pour les tours de dégâts (pas gold ni research)
+      if (tower.id === 'gold' || tower.id === 'research') return;
+
+      const towerConfig = TOWER_TYPES[tower.id.toUpperCase()];
+      const currentLevel = tower.level || 1;
+
+      // Valider le niveau cible
+      if (targetLevel <= currentLevel || targetLevel > 50) return;
+
+      // S'assurer que tower.damage et fireRate existent
+      if (!tower.damage || tower.damage <= 0) {
+        tower.damage = towerConfig.damage || 1;
+      }
+      if (!tower.fireRate || tower.fireRate <= 0) {
+        tower.fireRate = towerConfig.fireRate || 1000;
+      }
+
+      // Calculer le coût total et vérifier l'argent
+      let totalCost = 0;
+      for (let level = currentLevel; level < targetLevel; level++) {
+        totalCost += getTowerUpgradeCost(towerConfig.upgradeCost, level);
+      }
+
+      if (player.money < totalCost) return;
+
+      // Déduire l'argent
+      player.money -= totalCost;
+
+      // Appliquer tous les niveaux
+      for (let level = currentLevel; level < targetLevel; level++) {
+        tower.level = level + 1;
+
+        // Appliquer les améliorations selon le type de tour
+        if (tower.id === 'basic') {
+          tower.damage += towerConfig.damageUpgrade || 0;
+          const currentMultiplier = 1000 / tower.fireRate;
+          const newMultiplier = currentMultiplier + 0.10;
+          tower.fireRate = Math.max(200, Math.floor(1000 / newMultiplier));
+        } else if (tower.id === 'sniper') {
+          if (tower.level <= 5) {
+            tower.range = (tower.range || towerConfig.range) + 50;
+            tower.damage += towerConfig.damageUpgrade || 0;
+          } else {
+            tower.damage += towerConfig.damageUpgrade || 0;
+            const currentMultiplier = 1000 / tower.fireRate;
+            const newMultiplier = currentMultiplier + 0.10;
+            tower.fireRate = Math.max(500, Math.floor(1000 / newMultiplier));
+          }
+        } else if (tower.id === 'rapid') {
+          tower.damage += towerConfig.damageUpgrade || 0;
+          const currentMultiplier = 1000 / tower.fireRate;
+          const newMultiplier = currentMultiplier + 0.20;
+          tower.fireRate = Math.max(100, Math.floor(1000 / newMultiplier));
+        } else if (tower.id === 'electric') {
+          tower.damage += towerConfig.damageUpgrade || 0;
+          const currentMultiplier = 1000 / tower.fireRate;
+          const newMultiplier = currentMultiplier + 0.15;
+          tower.fireRate = Math.max(300, Math.floor(1000 / newMultiplier));
+        }
+      }
+
+      // Calculer le prochain coût d'amélioration
+      const nextUpgradeCost = getTowerUpgradeCost(towerConfig.upgradeCost, tower.level);
+      socket.emit('TOWER_UPGRADED', {
+        tower,
+        money: player.money,
+        upgradeCost: nextUpgradeCost
+      });
+    });
+
     // Déplacer une tour
     socket.on('MOVE_TOWER', ({ oldX, oldY, newX, newY }) => {
       const roomCode = playerRooms.get(socket.id);

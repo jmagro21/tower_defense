@@ -4,6 +4,26 @@ function getTowerUpgradeCost(baseUpgradeCost, currentLevel) {
   return baseUpgradeCost * multiplier;
 }
 
+// Calculer le coût total pour passer du niveau fromLevel au niveau toLevel
+function calculateTotalUpgradeCost(baseUpgradeCost, fromLevel, toLevel) {
+  if (toLevel <= fromLevel) return 0;
+  
+  let totalCost = 0;
+  for (let level = fromLevel; level < toLevel; level++) {
+    totalCost += getTowerUpgradeCost(baseUpgradeCost, level);
+  }
+  
+  // Appliquer les réductions (recherche + ingénieur)
+  const defenseBonuses = typeof getDefenseBonuses === 'function' ? getDefenseBonuses() : { upgradeCostReduction: 0 };
+  let engineerDiscount = 0;
+  if (typeof getEngineerUpgradeDiscount === 'function') {
+    engineerDiscount = getEngineerUpgradeDiscount();
+  }
+  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
+  
+  return Math.floor(totalCost * (1 - totalReduction / 100));
+}
+
 // Gestion des tours - DÉCLARER LES VARIABLES D'ABORD
 let selectedTowerType = null;
 let towers = [];
@@ -462,6 +482,27 @@ function openTowerMenu(towerData, container) {
   const upgradeCostElem = document.getElementById('tower-upgrade-cost');
   if (upgradeCostElem) upgradeCostElem.textContent = `${upgradeCost} 💰`;
   
+  // Vérifier le niveau maximum et désactiver le bouton si atteint
+  const maxLevel = (selectedTower.id === 'gold' || selectedTower.id === 'research') 
+    ? 20 
+    : (typeof getMaxTowerSize === 'function' ? getMaxTowerSize() : 50);
+  const isMaxLevel = currentLevel >= maxLevel;
+  
+  const upgradeButton = document.querySelector('.btn-upgrade-main');
+  if (upgradeButton) {
+    if (isMaxLevel) {
+      upgradeButton.disabled = true;
+      upgradeButton.style.opacity = '0.5';
+      upgradeButton.style.cursor = 'not-allowed';
+      upgradeButton.textContent = '🔒 Niveau MAX';
+    } else {
+      upgradeButton.disabled = false;
+      upgradeButton.style.opacity = '1';
+      upgradeButton.style.cursor = 'pointer';
+      upgradeButton.innerHTML = '<span id="tower-upgrade-cost">' + upgradeCost + ' 💰</span> Améliorer';
+    }
+  }
+  
   console.log('DOM mis à jour, affichage des compétences et ciblage...');
   
   // Afficher la portée si c'est un sniper
@@ -522,6 +563,29 @@ function openTowerMenu(towerData, container) {
     if (fireRateRow) fireRateRow.style.display = 'flex';
     if (researchRow) researchRow.style.display = 'none';
     if (goldRow) goldRow.style.display = 'none';
+  }
+  
+  // Afficher/cacher le sélecteur de niveau (seulement pour tours de dégâts, pas gold ni research)
+  const levelSelector = document.getElementById('tower-level-selector');
+  if (levelSelector) {
+    if (selectedTower.id !== 'gold' && selectedTower.id !== 'research') {
+      levelSelector.style.display = 'block';
+      
+      // Initialiser le champ avec le niveau actuel + 1
+      const targetLevelInput = document.getElementById('target-level-input');
+      const maxLevel = typeof getMaxTowerSize === 'function' ? getMaxTowerSize() : 50;
+      if (targetLevelInput) {
+        targetLevelInput.value = Math.min((selectedTower.level || 1) + 1, maxLevel);
+        targetLevelInput.max = maxLevel;
+        targetLevelInput.min = (selectedTower.level || 1) + 1;
+      }
+      
+      // Cacher les infos d'upgrade multi au départ
+      const multiInfo = document.getElementById('multi-upgrade-info');
+      if (multiInfo) multiInfo.style.display = 'none';
+    } else {
+      levelSelector.style.display = 'none';
+    }
   }
   
   console.log('Avant updateAbilitiesDisplay');
@@ -765,6 +829,17 @@ function upgradeTower() {
   const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
   if (!towerConfig) return;
   const currentLevel = selectedTower.level || 1;
+  
+  // Vérifier le niveau maximum selon le type de tour
+  const maxLevel = (selectedTower.id === 'gold' || selectedTower.id === 'research') 
+    ? 20 
+    : (typeof getMaxTowerSize === 'function' ? getMaxTowerSize() : 50);
+  
+  if (currentLevel >= maxLevel) {
+    showToast('❌ Cette tour est au niveau maximum !', 'error');
+    return;
+  }
+  
   const upgradeCost = getTowerUpgradeCost(towerConfig.upgradeCost, currentLevel);
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');
@@ -775,6 +850,88 @@ function upgradeTower() {
     x: selectedTower.x,
     y: selectedTower.y
   });
+}
+
+// Calculer le coût pour améliorer au niveau cible
+function calculateMultiUpgradeCost() {
+  if (!selectedTower) return;
+  
+  const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
+  if (!towerConfig) return;
+  
+  const targetLevelInput = document.getElementById('target-level-input');
+  const targetLevel = parseInt(targetLevelInput.value);
+  const currentLevel = selectedTower.level || 1;
+  
+  // Vérifier niveau valide
+  const maxLevel = (selectedTower.id === 'gold' || selectedTower.id === 'research') 
+    ? 20 
+    : (typeof getMaxTowerSize === 'function' ? getMaxTowerSize() : 50);
+  
+  if (targetLevel <= currentLevel) {
+    showToast('⚠️ Le niveau cible doit être supérieur au niveau actuel !', 'warning');
+    return;
+  }
+  
+  if (targetLevel > maxLevel) {
+    showToast(`⚠️ Le niveau maximum est ${maxLevel} !`, 'warning');
+    targetLevelInput.value = maxLevel;
+    return;
+  }
+  
+  // Calculer le coût total
+  const totalCost = calculateTotalUpgradeCost(towerConfig.upgradeCost, currentLevel, targetLevel);
+  
+  // Afficher les infos
+  const infoDiv = document.getElementById('multi-upgrade-info');
+  const costSpan = document.getElementById('multi-upgrade-total-cost');
+  const targetSpan = document.getElementById('multi-target-level');
+  
+  if (infoDiv && costSpan && targetSpan) {
+    costSpan.textContent = `${totalCost} 💰`;
+    targetSpan.textContent = targetLevel;
+    infoDiv.style.display = 'block';
+    
+    // Vérifier si assez d'argent
+    if (playerMoney < totalCost) {
+      costSpan.style.color = '#e74c3c';
+    } else {
+      costSpan.style.color = '#2ecc71';
+    }
+  }
+}
+
+// Améliorer directement au niveau cible
+function upgradeToLevel() {
+  if (!selectedTower) return;
+  
+  const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
+  if (!towerConfig) return;
+  
+  const targetLevel = parseInt(document.getElementById('target-level-input').value);
+  const currentLevel = selectedTower.level || 1;
+  
+  if (targetLevel <= currentLevel) {
+    showToast('⚠️ Le niveau cible doit être supérieur au niveau actuel !', 'warning');
+    return;
+  }
+  
+  const totalCost = calculateTotalUpgradeCost(towerConfig.upgradeCost, currentLevel, targetLevel);
+  
+  if (playerMoney < totalCost) {
+    showToast(`❌ Pas assez d'or ! (${totalCost} 💰 requis)`, 'error');
+    return;
+  }
+  
+  // Envoyer au serveur le nombre de niveaux à upgrader
+  socket.emit('UPGRADE_TOWER_MULTI', {
+    towerId: selectedTower.id,
+    x: selectedTower.x,
+    y: selectedTower.y,
+    targetLevel: targetLevel
+  });
+  
+  showToast(`⚡ Amélioration vers niveau ${targetLevel}...`, 'info');
 }
 
 // Toggle l'affichage des cercles d'aura des monstres (buffer, bigboss)
