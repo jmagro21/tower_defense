@@ -323,8 +323,8 @@ function spawnSplitMonster(monsterData) {
 function spawnBigBossMinion(bigBoss) {
   if (!gameScene || !bigBoss.sprite || !bigBoss.sprite.active) return;
   
-  // Limite de 300 unités sur le board - Titan ne peut plus spawn
-  const MAX_UNITS_ON_BOARD = 300;
+  // Limite de 450 unités sur le board - Titan ne peut plus spawn
+  const MAX_UNITS_ON_BOARD = 450;
   if (monsters.length >= MAX_UNITS_ON_BOARD) {
     // Effet visuel pour montrer que le spawn est bloqué
     if (bigBoss.sprite) {

@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
 const GameRoom = require('../game/GameRoom');
 const User = require('../models/User');
+
 const { SOCKET_EVENTS, TOWER_TYPES, MONSTER_TYPES } = require('../../shared/constants');
+const { getTowerUpgradeCost } = require('../../shared/upgradeUtils');
 
 const rooms = new Map(); // code -> GameRoom
 const playerRooms = new Map(); // socketId -> room code
@@ -246,7 +248,7 @@ module.exports = (io) => {
     });
 
     // Améliorer une tour
-    socket.on('UPGRADE_TOWER', ({ towerId, x, y, upgradeCost: clientUpgradeCost }) => {
+    socket.on('UPGRADE_TOWER', ({ towerId, x, y }) => {
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -257,25 +259,13 @@ module.exports = (io) => {
       const tower = player.towers.find(t => t.x === x && t.y === y);
       if (!tower) return;
 
+
       const towerConfig = TOWER_TYPES[tower.id.toUpperCase()];
-      
-      // Calculer le coût d'amélioration de base (sans bonus de recherche)
-      // Pour toutes les tours: prix x2 tous les 5 niveaux
       const currentLevel = tower.level || 1;
-      const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
-      const baseUpgradeCost = towerConfig.upgradeCost * multiplier;
-      
-      // Utiliser le coût envoyé par le client (avec bonus de recherche)
-      // Mais vérifier qu'il n'est pas inférieur à 50% du coût de base (anti-triche)
-      const minAllowedCost = Math.floor(baseUpgradeCost * 0.5);
-      const upgradeCost = (clientUpgradeCost && clientUpgradeCost >= minAllowedCost) 
-        ? clientUpgradeCost 
-        : baseUpgradeCost;
-
+      const upgradeCost = getTowerUpgradeCost(towerConfig.upgradeCost, currentLevel);
       if (player.money < upgradeCost) return;
-
       player.money -= upgradeCost;
-      tower.level = (tower.level || 1) + 1;
+      tower.level = currentLevel + 1;
       
       // S'assurer que tower.damage existe
       if (!tower.damage || tower.damage <= 0) {
@@ -285,6 +275,7 @@ module.exports = (io) => {
         tower.fireRate = towerConfig.fireRate || 1000;
       }
       
+
       // Appliquer les améliorations selon le type de tour
       // Pour la cadence: on utilise des bonus de multiplicateur flat
       // multiplicateur = 1000 / fireRate, donc newFireRate = 1000 / (oldMultiplier + bonus)
@@ -311,12 +302,26 @@ module.exports = (io) => {
         const currentMultiplier = 1000 / tower.fireRate;
         const newMultiplier = currentMultiplier + 0.20;
         tower.fireRate = Math.max(100, Math.floor(1000 / newMultiplier));
+      } else if (tower.id === 'gold') {
+        // Gold: bonus limité à niveau 20 max
+        if (tower.level <= 20) {
+          tower.damage += towerConfig.damageUpgrade || 0;
+        }
+        // Pas de bonus de cadence
+      } else if (tower.id === 'research') {
+        // Recherche: bonus limité à niveau 20 max
+        if (tower.level <= 20) {
+          tower.damage += towerConfig.damageUpgrade || 0;
+        }
+        // Pas de bonus de cadence
       }
-      // Gold et Research: pas de bonus de cadence, seulement les dégâts de base
 
+      // Calculer le prochain coût d'amélioration (pour affichage côté client)
+      const nextUpgradeCost = getTowerUpgradeCost(towerConfig.upgradeCost, tower.level);
       socket.emit('TOWER_UPGRADED', {
         tower,
-        money: player.money
+        money: player.money,
+        upgradeCost: nextUpgradeCost
       });
     });
 
@@ -421,15 +426,19 @@ module.exports = (io) => {
       const room = rooms.get(roomCode);
       if (!room) return;
 
-      room.addMoney(socket.id, reward);
+      // Rééquilibrage : multiplicateur global sur le gain d'or par mob tué
+      const goldMultiplier = 0.7; // 70% du reward de base (ajuste ici pour équilibrer)
+      const balancedReward = Math.floor(reward * goldMultiplier);
+
+      room.addMoney(socket.id, balancedReward);
       room.monsterKilledByPlayer(socket.id); // Décrémenter le compteur de monstres
-      
+
       // Les kills sont déjà incrémentés dans room.addMoney()
-      
+
       socket.emit(SOCKET_EVENTS.MONEY_UPDATE, {
         money: room.players.get(socket.id).money
       });
-      
+
       // Envoyer les stats mises à jour de tous les joueurs
       io.to(roomCode).emit('PLAYERS_STATS_UPDATE', {
         players: room.getPlayerData()

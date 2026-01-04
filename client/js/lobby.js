@@ -264,6 +264,14 @@ function updatePlayersList() {
   roomPlayers.forEach(player => {
     const li = document.createElement('li');
     li.textContent = `👤 ${player.username}`;
+    li.style.cursor = 'pointer';
+    li.title = 'Observer ce joueur';
+    li.onclick = () => {
+      if (socket && player.username) {
+        socket.emit('spectatePlayer', { username: player.username });
+        showToast(`Observation de ${player.username}...`, 'info');
+      }
+    };
     playersList.appendChild(li);
   });
   

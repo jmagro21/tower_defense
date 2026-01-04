@@ -20,9 +20,9 @@ let researchKills = 0; // Kills accumulés pour la recherche en cours
 
 // Déterminer le nombre de kills requis pour compléter un niveau de recherche
 function getKillsRequiredForLevel(level, category = null, research = null) {
-  // Pour towerSize, toujours 50 kills par niveau
+  // Pour towerSize, progression exponentielle : 50 * 1.15^niveau
   if (category === 'general' && research === 'towerSize') {
-    return 50;
+    return Math.round(50 * Math.pow(1.15, level - 1));
   }
   // Pour les autres, progression standard
   return 5 + (level * 5); // Level 1: 5, Level 2: 10, Level 3: 15, etc...
@@ -70,6 +70,12 @@ function getGeneralBonuses() {
 // Obtenir la taille max des tours
 function getMaxTowerSize() {
   return 20 + getGeneralBonuses().towerSizeBonus;
+}
+
+// Coût pour augmenter la taille max des tours (ex: 200 gold * niveau)
+function getTowerSizeUpgradeCost() {
+  const level = researchTree.general.towerSize.level + 1; // coût du prochain niveau
+  return 200 * level;
 }
 
 // Ajouter un kill et progresser la recherche
@@ -221,37 +227,42 @@ function updateResearchUI() {
   
   // Construire l'affichage de l'attaque
   let attackHTML = '<div class="research-category"><h4>🗡️ Attaque</h4>';
+
+  // Affichage spécial pour la taille max des tours (général)
+  const towerSizeLevel = researchTree.general.towerSize.level;
+  const towerSizeCost = getTowerSizeUpgradeCost();
+  const towerSizeHTML = `<div class="research-category"><h4>📏 Taille max tours</h4>
+    <div>Niveau actuel : <b>${towerSizeLevel}</b> &nbsp;|&nbsp; Prochain coût : <b>${towerSizeCost} 💰</b></div>
+    <div>Limite actuelle : <b>${getMaxTowerSize()}</b> tours</div>
+  </div>`;
   for (const [key, data] of Object.entries(researchTree.attack)) {
     const isCurrent = currentResearch?.category === 'attack' && currentResearch?.research === key;
     const killsNeeded = getKillsRequiredForLevel(data.level + 1, 'attack', key);
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
-    
+    const isMax = data.level >= 25;
     // Calculer les stats actuelles et futures
     const currentBonus = getResearchBonus(data.level);
     const nextBonus = getResearchBonus(data.level + 1);
     const bonusSign = key === 'monsterCost' ? '-' : '+'; // Réduction de coût est négative
-    
     attackHTML += `
-      <div class="research-item ${buttonClass}">
+      <div class="research-item ${buttonClass}${isMax ? ' maxed' : ''}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
-          <span class="research-level">Nv.${data.level}</span>
+          <span class="research-level">Nv.${data.level}${isMax ? ' (MAX)' : ''}</span>
         </div>
         <div class="research-stats">
           <span class="current-bonus">${bonusSign}${currentBonus}%</span>
-          <span class="next-bonus">→ ${bonusSign}${nextBonus}%</span>
+          <span class="next-bonus">${isMax ? '' : `→ ${bonusSign}${nextBonus}%`}</span>
         </div>
-        ${isCurrent ? `
+        ${isCurrent && !isMax ? `
           <div class="research-progress-bar">
             <div class="progress-fill" style="width: ${progress}%"></div>
             <span class="progress-text">${researchKills}/${killsNeeded}</span>
           </div>
         ` : ''}
-        <button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('attack', '${key}')">
-          ${isCurrent ? '❌ Annuler' : '▶️ Lancer'}
-        </button>
+        ${isMax ? `<span class="research-max">MAX</span>` : `<button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('attack', '${key}')">${isCurrent ? '❌ Annuler' : '▶️ Lancer'}</button>`}
       </div>
     `;
   }
@@ -264,32 +275,29 @@ function updateResearchUI() {
     const killsNeeded = getKillsRequiredForLevel(data.level + 1, 'defense', key);
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
-    
+    const isMax = data.level >= 25;
     // Calculer les stats actuelles et futures
     const currentBonus = getResearchBonus(data.level);
     const nextBonus = getResearchBonus(data.level + 1);
     const bonusSign = key === 'towerUpgradeCost' ? '-' : '+'; // Réduction de coût est négative
-    
     defenseHTML += `
-      <div class="research-item ${buttonClass}">
+      <div class="research-item ${buttonClass}${isMax ? ' maxed' : ''}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
-          <span class="research-level">Nv.${data.level}</span>
+          <span class="research-level">Nv.${data.level}${isMax ? ' (MAX)' : ''}</span>
         </div>
         <div class="research-stats">
           <span class="current-bonus">${bonusSign}${currentBonus}%</span>
-          <span class="next-bonus">→ ${bonusSign}${nextBonus}%</span>
+          <span class="next-bonus">${isMax ? '' : `→ ${bonusSign}${nextBonus}%`}</span>
         </div>
-        ${isCurrent ? `
+        ${isCurrent && !isMax ? `
           <div class="research-progress-bar">
             <div class="progress-fill" style="width: ${progress}%"></div>
             <span class="progress-text">${researchKills}/${killsNeeded}</span>
           </div>
         ` : ''}
-        <button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('defense', '${key}')">
-          ${isCurrent ? '❌ Annuler' : '▶️ Lancer'}
-        </button>
+        ${isMax ? `<span class="research-max">MAX</span>` : `<button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('defense', '${key}')">${isCurrent ? '❌ Annuler' : '▶️ Lancer'}</button>`}
       </div>
     `;
   }
@@ -302,32 +310,29 @@ function updateResearchUI() {
     const killsNeeded = getKillsRequiredForLevel(data.level + 1, 'general', key);
     const progress = isCurrent ? (researchKills / killsNeeded * 100) : 0;
     const buttonClass = isCurrent ? 'in-progress' : '';
-    
+    const isMax = data.level >= 25;
     // Pour towerSize, afficher en nombre de tours au lieu de pourcentage
     const currentBonus = key === 'towerSize' ? data.level * 5 : getResearchBonus(data.level);
     const nextBonus = key === 'towerSize' ? (data.level + 1) * 5 : getResearchBonus(data.level + 1);
     const bonusUnit = key === 'towerSize' ? ' tours' : '%';
-    
     generalHTML += `
-      <div class="research-item ${buttonClass}">
+      <div class="research-item ${buttonClass}${isMax ? ' maxed' : ''}">
         <div class="research-header">
           <span class="research-icon">${data.icon}</span>
           <span class="research-name">${data.name}</span>
-          <span class="research-level">Nv.${data.level}</span>
+          <span class="research-level">Nv.${data.level}${isMax ? ' (MAX)' : ''}</span>
         </div>
         <div class="research-stats">
           <span class="current-bonus">+${currentBonus}${bonusUnit}</span>
-          <span class="next-bonus">→ +${nextBonus}${bonusUnit}</span>
+          <span class="next-bonus">${isMax ? '' : `→ +${nextBonus}${bonusUnit}`}</span>
         </div>
-        ${isCurrent ? `
+        ${isCurrent && !isMax ? `
           <div class="research-progress-bar">
             <div class="progress-fill" style="width: ${progress}%"></div>
             <span class="progress-text">${researchKills}/${killsNeeded}</span>
           </div>
         ` : ''}
-        <button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('general', '${key}')">
-          ${isCurrent ? '❌ Annuler' : '▶️ Lancer'}
-        </button>
+        ${isMax ? `<span class="research-max">MAX</span>` : `<button class="btn-research ${isCurrent ? 'cancel' : ''}" onclick="toggleResearch('general', '${key}')">${isCurrent ? '❌ Annuler' : '▶️ Lancer'}</button>`}
       </div>
     `;
   }

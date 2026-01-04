@@ -1,3 +1,23 @@
+// Réception de l'amélioration (serveur -> client)
+if (typeof socket !== 'undefined') {
+  socket.on('TOWER_UPGRADED', ({ tower, money, upgradeCost }) => {
+    // Mettre à jour la tour locale
+    const idx = towers.findIndex(t => t.x === tower.x && t.y === tower.y);
+    if (idx !== -1) {
+      towers[idx] = { ...towers[idx], ...tower };
+    }
+    playerMoney = money;
+    // Mettre à jour l'affichage du coût suivant si besoin
+    if (selectedTower && selectedTower.x === tower.x && selectedTower.y === tower.y) {
+      const costElem = document.getElementById('tower-upgrade-cost');
+      if (costElem) costElem.textContent = `${upgradeCost} 💰`;
+      selectedTower.level = tower.level;
+    }
+    if (typeof updateUI === 'function') updateUI();
+    showToast('Tour améliorée !', 'success');
+  });
+}
+import { getTowerUpgradeCost } from './upgradeUtils.js';
 // Gestion des tours
 let selectedTowerType = null;
 let towers = [];
@@ -730,44 +750,19 @@ function moveTower(x, y) {
 
 function upgradeTower() {
   if (!selectedTower) return;
-  
   const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
   if (!towerConfig) return;
-  
-  const defenseBonuses = getDefenseBonuses();
-  
-  // Passif classe Ingénieur: réduction supplémentaire
-  let engineerDiscount = 0;
-  if (typeof getEngineerUpgradeDiscount === 'function') {
-    engineerDiscount = getEngineerUpgradeDiscount();
-  }
-  
-  // Coût d'amélioration: prix x2 tous les 5 niveaux pour toutes les tours
   const currentLevel = selectedTower.level || 1;
-  const priceMultiplier = Math.pow(2, Math.floor(currentLevel / 5));
-  const baseUpgradeCost = towerConfig.upgradeCost * priceMultiplier;
-  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
-  const upgradeCost = Math.floor(baseUpgradeCost * (1 - totalReduction / 100));
-  
-  // Limite de niveau max pour les tours
-  if ((selectedTower.level || 1) >= 50) {
-    showToast('Niveau max atteint (50) !', 'warning');
-    return;
-  }
-  
+  const upgradeCost = getTowerUpgradeCost(towerConfig.upgradeCost, currentLevel);
   if (playerMoney < upgradeCost) {
     showToast('Pas assez d\'argent pour améliorer !', 'warning');
     return;
   }
-  
   socket.emit('UPGRADE_TOWER', {
     towerId: selectedTower.id,
     x: selectedTower.x,
-    y: selectedTower.y,
-    upgradeCost: upgradeCost  // Envoyer le coût avec réduction de recherche
+    y: selectedTower.y
   });
-  
-  // Ne pas fermer le menu, il sera mis à jour par l'événement TOWER_UPGRADED
 }
 
 // Toggle l'affichage des cercles d'aura des monstres (buffer, bigboss)
