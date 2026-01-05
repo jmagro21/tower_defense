@@ -50,6 +50,68 @@ function updateUI() {
   
   // Mettre à jour le classement
   updateLeaderboard();
+  
+  // Afficher MORT SUBITE après vague 60
+  updateSuddenDeathDisplay();
+}
+
+function updateSuddenDeathDisplay() {
+  let suddenDeathDiv = document.getElementById('sudden-death-banner');
+  
+  if (monsterLevel > 60) {
+    if (!suddenDeathDiv) {
+      suddenDeathDiv = document.createElement('div');
+      suddenDeathDiv.id = 'sudden-death-banner';
+      suddenDeathDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #8b0000 0%, #ff0000 100%);
+        color: white;
+        padding: 20px 40px;
+        font-size: 3em;
+        font-weight: bold;
+        text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        border: 4px solid #ffff00;
+        border-radius: 15px;
+        z-index: 9999;
+        pointer-events: none;
+        animation: pulseSuddenDeath 2s infinite;
+      `;
+      suddenDeathDiv.textContent = '💀 MORT SUBITE 💀';
+      document.body.appendChild(suddenDeathDiv);
+      
+      // Ajouter l'animation CSS si elle n'existe pas
+      if (!document.getElementById('sudden-death-style')) {
+        const style = document.createElement('style');
+        style.id = 'sudden-death-style';
+        style.textContent = `
+          @keyframes pulseSuddenDeath {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // Faire disparaître après 5 secondes
+      setTimeout(() => {
+        if (suddenDeathDiv) {
+          suddenDeathDiv.style.opacity = '0.3';
+          suddenDeathDiv.style.fontSize = '1.5em';
+          suddenDeathDiv.style.top = '10px';
+          suddenDeathDiv.style.left = '50%';
+          suddenDeathDiv.style.transform = 'translate(-50%, 0)';
+          suddenDeathDiv.style.transition = 'all 1s ease';
+        }
+      }, 5000);
+    }
+  } else {
+    if (suddenDeathDiv) {
+      suddenDeathDiv.remove();
+    }
+  }
 }
 
 function updateTowerCount() {
@@ -356,44 +418,67 @@ function showGameOver(data) {
   modal.classList.remove('hidden');
 }
 
+// Cache pour éviter les mises à jour inutiles du leaderboard
+let lastLeaderboardData = null;
+let leaderboardUpdateTimer = null;
+
 function updateLeaderboard() {
   if (!playersStats || playersStats.length === 0) return;
   
-  const leaderboardList = document.getElementById('leaderboard-list');
+  // Créer une signature des données pour détecter les changements
+  const dataSignature = playersStats.map(p => 
+    `${p.username}:${p.money}:${p.health}:${p.kills}:${p.isAlive}:${p.attackGold}`
+  ).join('|');
   
-  // Trier les joueurs par vie restante (descendant)
-  const sortedPlayers = [...playersStats].sort((a, b) => {
-    if (a.isAlive && !b.isAlive) return -1;
-    if (!a.isAlive && b.isAlive) return 1;
-    return (b.health || 0) - (a.health || 0);
-  });
+  // Ne mettre à jour que si les données ont changé
+  if (dataSignature === lastLeaderboardData) return;
+  lastLeaderboardData = dataSignature;
   
-  leaderboardList.innerHTML = sortedPlayers.map((player, index) => {
-    const health = CONSTANTS.GAME.MONSTER_PASS_LIMIT - (player.health || 0);
-    const statusIcon = player.isAlive ? '✓' : '✗';
-    const statusClass = player.isAlive ? 'alive' : 'eliminated';
-    const rank = index + 1;
-    const attackGold = player.attackGold || 0;
-    const isCurrentPlayer = currentUser && player.username === currentUser.username;
-    const clickableClass = !isCurrentPlayer ? 'spectatable' : '';
-    const onClickAttr = !isCurrentPlayer ? `onclick="spectatePlayer('${player.username}')"` : '';
+  // Utiliser un debounce pour éviter trop de mises à jour rapides
+  if (leaderboardUpdateTimer) {
+    clearTimeout(leaderboardUpdateTimer);
+  }
+  
+  leaderboardUpdateTimer = setTimeout(() => {
+    const leaderboardList = document.getElementById('leaderboard-list');
+    if (!leaderboardList) return;
     
-    return `
-      <div class="leaderboard-item ${statusClass} ${clickableClass}" ${onClickAttr}>
-        <div class="leaderboard-player-name">
-          <span class="status-icon">${rank}.</span>
-          <span>${player.username}</span>
-          ${!isCurrentPlayer ? '<span class="spectate-icon" title="Voir la map">👁️</span>' : ''}
+    // Trier les joueurs par vie restante (descendant)
+    const sortedPlayers = [...playersStats].sort((a, b) => {
+      if (a.isAlive && !b.isAlive) return -1;
+      if (!a.isAlive && b.isAlive) return 1;
+      return (b.health || 0) - (a.health || 0);
+    });
+    
+    const html = sortedPlayers.map((player, index) => {
+      const health = CONSTANTS.GAME.MONSTER_PASS_LIMIT - (player.health || 0);
+      const statusIcon = player.isAlive ? '✓' : '✗';
+      const statusClass = player.isAlive ? 'alive' : 'eliminated';
+      const rank = index + 1;
+      const attackGold = player.attackGold || 0;
+      const isCurrentPlayer = currentUser && player.username === currentUser.username;
+      const clickableClass = !isCurrentPlayer ? 'spectatable' : '';
+      const onClickAttr = !isCurrentPlayer ? `onclick="spectatePlayer('${player.username}')"` : '';
+      
+      return `
+        <div class="leaderboard-item ${statusClass} ${clickableClass}" ${onClickAttr}>
+          <div class="leaderboard-player-name">
+            <span class="status-icon">${rank}.</span>
+            <span>${player.username}</span>
+            ${!isCurrentPlayer ? '<span class="spectate-icon" title="Voir la map">👁️</span>' : ''}
+          </div>
+          <div class="leaderboard-player-stats">
+            <span class="stat-gold">💰 ${player.money || 0}</span>
+            <span class="stat-attack" title="Gold dépensé en attaque">⚔️ ${attackGold}</span>
+            <span class="stat-life">❤️ ${health}</span>
+            <span class="stat-kills">💀 ${player.kills || 0}</span>
+          </div>
         </div>
-        <div class="leaderboard-player-stats">
-          <span class="stat-gold">💰 ${player.money || 0}</span>
-          <span class="stat-attack" title="Gold dépensé en attaque">⚔️ ${attackGold}</span>
-          <span class="stat-life">❤️ ${health}</span>
-          <span class="stat-kills">💀 ${player.kills || 0}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+    
+    leaderboardList.innerHTML = html;
+  }, 100); // Debounce de 100ms
 }
 
 // Toggle du panneau de gestion des tours
@@ -435,6 +520,12 @@ function updateTowersPanelUI() {
   const container = document.getElementById('towers-list-content');
   if (!container) return;
   
+  // Mettre à jour l'affichage de l'or dans le modal
+  const moneyDisplay = document.getElementById('towers-modal-money');
+  if (moneyDisplay) {
+    moneyDisplay.textContent = `💰 ${playerMoney || 0}`;
+  }
+  
   // Utiliser window.towers pour être sûr d'accéder à la bonne référence
   const towersList = window.towers || [];
   
@@ -464,6 +555,24 @@ function updateTowersPanelUI() {
   };
   
   let html = `
+    <div class="towers-panel-header">
+      <div class="global-level-selector">
+        <label for="global-target-level">🎯 Niveau cible global:</label>
+        <input type="number" 
+          id="global-target-level" 
+          class="global-level-input" 
+          min="1" 
+          max="50" 
+          value="1"
+          onchange="applyGlobalTargetLevel()">
+        <button class="btn-apply-global-level" onclick="applyGlobalTargetLevel()">
+          ✅ Appliquer à toutes
+        </button>
+        <button class="btn-reset-all-levels" onclick="resetAllTargetLevels()">
+          🔄 Réinitialiser
+        </button>
+      </div>
+    </div>
     <table class="towers-table">
       <thead>
         <tr>
@@ -485,8 +594,8 @@ function updateTowersPanelUI() {
     
     const icon = towerTypeIcons[towerTypeKey] || '🔵';
     const level = tower.level || 1;
-    const maxLevel = (tower.id === 'gold' || tower.id === 'research') ? 20 : getMaxTowerSize();
-    const isMaxLevel = level >= maxLevel;
+    const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+    const isMaxLevel = level >= maxLevelForType;
     
     // Calcul du coût d'amélioration avec passif ingénieur
     const defenseBonuses = getDefenseBonuses();
@@ -530,9 +639,25 @@ function updateTowersPanelUI() {
         <td class="tower-cell-upgrade">
           ${isMaxLevel ? 
             '<span class="max-level-badge">MAX</span>' : 
-            `<button class="btn-upgrade-list" onclick="upgradeTowerFromList(${index})">
-              ⬆️ ${upgradeCost} 💰
-            </button>`
+            `<div class="upgrade-controls">
+              <button class="btn-upgrade-list" onclick="upgradeTowerFromList(${index})">
+                ⬆️ ${upgradeCost} 💰
+              </button>
+              <div class="multi-upgrade-controls">
+                <input type="number" 
+                  class="target-level-input" 
+                  id="target-level-${index}" 
+                  min="${level + 1}" 
+                  max="${maxLevelForType}" 
+                  value="${Math.min(level + 1, maxLevelForType)}"
+                  onchange="updateMultiUpgradeCost(${index})">
+                <button class="btn-multi-upgrade" 
+                  id="btn-multi-${index}"
+                  onclick="upgradeToTargetLevel(${index})">
+                  🚀 Calculer
+                </button>
+              </div>
+            </div>`
           }
         </td>
         <td class="tower-cell-augments">
@@ -557,6 +682,12 @@ function updateTowersPanelUI() {
 
 // Améliorer une tour depuis la liste
 function upgradeTowerFromList(index) {
+  // MORT SUBITE : Bloquer les améliorations après vague 60
+  if (monsterLevel > 60) {
+    showToast('❌ MORT SUBITE : Améliorations interdites !', 'error');
+    return;
+  }
+  
   const towersList = window.towers || [];
   if (index < 0 || index >= towersList.length) return;
   
@@ -570,8 +701,8 @@ function upgradeTowerFromList(index) {
     tower.level = 1;
   }
   
-  // Limite spéciale pour gold et research : niveau 20 max
-  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : getMaxTowerSize();
+  // Limite spéciale pour gold et research : niveau 20 max, autres tours : 50 max
+  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
   const currentLevel = tower.level;
   
   if (currentLevel >= maxLevelForType) {
@@ -585,45 +716,280 @@ function upgradeTowerFromList(index) {
     engineerDiscount = getEngineerUpgradeDiscount();
   }
   const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
-  const upgradeCost = Math.floor(towerData.upgradeCost * currentLevel * (1 - totalReduction / 100));
+  
+  // Utiliser getTowerUpgradeCost pour calculer le coût correctement
+  const upgradeCost = typeof getTowerUpgradeCost === 'function' 
+    ? Math.floor(getTowerUpgradeCost(towerData.upgradeCost, currentLevel) * (1 - totalReduction / 100))
+    : Math.floor(towerData.upgradeCost * currentLevel * (1 - totalReduction / 100));
   
   if (playerMoney < upgradeCost) {
     showToast(`❌ Pas assez d'or ! (${upgradeCost} 💰 requis)`, 'error');
     return;
   }
   
-  // Sync with the latest tower state in case of bulk upgrades
-  const syncedLevel = tower.level || 1;
-  tower.level = syncedLevel + 1;
+  // Déduire l'argent localement pour un feedback immédiat
   playerMoney -= upgradeCost;
-
-  // Always recalculate stats from the new level
-  const damageBonus = getDefenseBonuses().damageBonus;
-  tower.damage = Math.floor(towerData.damage * (1 + (tower.level - 1) * 0.35) * (1 + damageBonus / 100));
-
-  const attackSpeedBonus = getDefenseBonuses().attackSpeedBonus;
-  tower.fireRate = Math.floor(towerData.fireRate / (1 + (tower.level - 1) * 0.15) / (1 + attackSpeedBonus / 100));
-
-  // Update level label
-  if (tower.levelText) {
-    tower.levelText.setText(`Nv.${tower.level}`);
-  }
-
-  // Upgrade animation
-  if (tower.sprite && gameScene) {
-    gameScene.tweens.add({
-      targets: tower.sprite,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 150,
-      yoyo: true,
-      ease: 'Power2'
+  updateUI();
+  updateTowersPanelUI();
+  
+  // Envoyer l'amélioration au serveur (comme le fait le modal de tour)
+  if (socket) {
+    socket.emit('UPGRADE_TOWER', {
+      towerId: tower.id,
+      x: tower.x,
+      y: tower.y
     });
   }
+  
+  // Le serveur répondra avec TOWER_UPGRADED qui mettra à jour l'interface
+}
 
-  showToast(`⬆️ Tour améliorée au niveau ${tower.level} !`, 'success');
-  updateTowersPanelUI();
+// Mettre à jour le coût d'amélioration multi-niveaux
+function updateMultiUpgradeCost(index) {
+  const towersList = window.towers || [];
+  if (index < 0 || index >= towersList.length) return;
+  
+  const tower = towersList[index];
+  const towerTypeKey = (tower.id || tower.type || 'basic').toUpperCase();
+  const towerData = CONSTANTS.TOWER_TYPES[towerTypeKey];
+  if (!towerData) return;
+  
+  const currentLevel = tower.level || 1;
+  const targetLevelInput = document.getElementById(`target-level-${index}`);
+  const btnMulti = document.getElementById(`btn-multi-${index}`);
+  
+  if (!targetLevelInput || !btnMulti) return;
+  
+  const targetLevel = parseInt(targetLevelInput.value) || currentLevel + 1;
+  
+  // Vérifier les limites
+  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+  if (targetLevel > maxLevelForType) {
+    targetLevelInput.value = maxLevelForType;
+    return updateMultiUpgradeCost(index);
+  }
+  if (targetLevel <= currentLevel) {
+    targetLevelInput.value = currentLevel + 1;
+    return updateMultiUpgradeCost(index);
+  }
+  
+  // Calculer le coût total
+  let totalCost = 0;
+  for (let level = currentLevel; level < targetLevel; level++) {
+    totalCost += getTowerUpgradeCost(towerData.upgradeCost, level);
+  }
+  
+  // Appliquer les réductions
+  const defenseBonuses = getDefenseBonuses();
+  let engineerDiscount = 0;
+  if (typeof getEngineerUpgradeDiscount === 'function') {
+    engineerDiscount = getEngineerUpgradeDiscount();
+  }
+  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
+  totalCost = Math.floor(totalCost * (1 - totalReduction / 100));
+  
+  // Mettre à jour le bouton
+  btnMulti.textContent = `🚀 ${totalCost} 💰`;
+  btnMulti.disabled = playerMoney < totalCost;
+}
+
+// Propager le niveau cible à toutes les autres tours
+function propagateTargetLevelToAll(sourceIndex, targetLevel) {
+  const towersList = window.towers || [];
+  
+  towersList.forEach((tower, index) => {
+    if (index === sourceIndex) return; // Ne pas affecter la tour source
+    
+    const currentLevel = tower.level || 1;
+    const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+    const effectiveTargetLevel = Math.min(targetLevel, maxLevelForType);
+    
+    // Ne mettre à jour que si le niveau cible est supérieur au niveau actuel
+    if (effectiveTargetLevel > currentLevel) {
+      const targetLevelInput = document.getElementById(`target-level-${index}`);
+      if (targetLevelInput) {
+        targetLevelInput.value = effectiveTargetLevel;
+        // Recalculer le coût sans propager à nouveau (éviter la boucle infinie)
+        updateMultiUpgradeCostSilent(index);
+      }
+    }
+  });
+}
+
+// Version silencieuse de updateMultiUpgradeCost (sans propagation)
+function updateMultiUpgradeCostSilent(index) {
+  const towersList = window.towers || [];
+  if (index < 0 || index >= towersList.length) return;
+  
+  const tower = towersList[index];
+  const towerTypeKey = (tower.id || tower.type || 'basic').toUpperCase();
+  const towerData = CONSTANTS.TOWER_TYPES[towerTypeKey];
+  if (!towerData) return;
+  
+  const currentLevel = tower.level || 1;
+  const targetLevelInput = document.getElementById(`target-level-${index}`);
+  const btnMulti = document.getElementById(`btn-multi-${index}`);
+  
+  if (!targetLevelInput || !btnMulti) return;
+  
+  const targetLevel = parseInt(targetLevelInput.value) || currentLevel + 1;
+  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+  
+  if (targetLevel > maxLevelForType || targetLevel <= currentLevel) {
+    return;
+  }
+  
+  // Calculer le coût total
+  let totalCost = 0;
+  for (let level = currentLevel; level < targetLevel; level++) {
+    totalCost += getTowerUpgradeCost(towerData.upgradeCost, level);
+  }
+  
+  // Appliquer les réductions
+  const defenseBonuses = getDefenseBonuses();
+  let engineerDiscount = 0;
+  if (typeof getEngineerUpgradeDiscount === 'function') {
+    engineerDiscount = getEngineerUpgradeDiscount();
+  }
+  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
+  totalCost = Math.floor(totalCost * (1 - totalReduction / 100));
+  
+  // Mettre à jour le bouton
+  btnMulti.textContent = `🚀 ${totalCost} 💰`;
+  btnMulti.disabled = playerMoney < totalCost;
+}
+
+// Améliorer une tour jusqu'à un niveau cible
+function upgradeToTargetLevel(index) {
+  // MORT SUBITE : Bloquer les améliorations après vague 60
+  if (monsterLevel > 60) {
+    showToast('❌ MORT SUBITE : Améliorations interdites !', 'error');
+    return;
+  }
+  
+  const towersList = window.towers || [];
+  if (index < 0 || index >= towersList.length) return;
+  
+  const tower = towersList[index];
+  const towerTypeKey = (tower.id || tower.type || 'basic').toUpperCase();
+  const towerData = CONSTANTS.TOWER_TYPES[towerTypeKey];
+  if (!towerData) return;
+  
+  const currentLevel = tower.level || 1;
+  const targetLevelInput = document.getElementById(`target-level-${index}`);
+  if (!targetLevelInput) return;
+  
+  const targetLevel = parseInt(targetLevelInput.value) || currentLevel + 1;
+  
+  // Vérifier les limites
+  const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+  if (targetLevel > maxLevelForType) {
+    showToast(`❌ Niveau maximum: ${maxLevelForType}`, 'error');
+    return;
+  }
+  if (targetLevel <= currentLevel) {
+    showToast('❌ Niveau cible doit être supérieur au niveau actuel', 'error');
+    return;
+  }
+  
+  // Calculer le coût total
+  let totalCost = 0;
+  for (let level = currentLevel; level < targetLevel; level++) {
+    totalCost += getTowerUpgradeCost(towerData.upgradeCost, level);
+  }
+  
+  // Appliquer les réductions
+  const defenseBonuses = getDefenseBonuses();
+  let engineerDiscount = 0;
+  if (typeof getEngineerUpgradeDiscount === 'function') {
+    engineerDiscount = getEngineerUpgradeDiscount();
+  }
+  const totalReduction = defenseBonuses.upgradeCostReduction + engineerDiscount;
+  totalCost = Math.floor(totalCost * (1 - totalReduction / 100));
+  
+  if (playerMoney < totalCost) {
+    showToast(`❌ Pas assez d'or ! (${totalCost} 💰 requis)`, 'error');
+    return;
+  }
+  
+  // Déduire l'argent localement
+  playerMoney -= totalCost;
   updateUI();
+  
+  // Envoyer au serveur
+  if (socket) {
+    socket.emit('UPGRADE_TOWER_MULTI', {
+      x: tower.x,
+      y: tower.y,
+      targetLevel: targetLevel
+    });
+  }
+  
+  showToast(`🚀 Amélioration vers niveau ${targetLevel} lancée !`, 'success');
+}
+
+// Appliquer le niveau cible global à toutes les tours
+function applyGlobalTargetLevel() {
+  const globalInput = document.getElementById('global-target-level');
+  if (!globalInput) return;
+  
+  const globalTargetLevel = parseInt(globalInput.value);
+  if (!globalTargetLevel || globalTargetLevel < 1) {
+    showToast('❌ Niveau invalide !', 'error');
+    return;
+  }
+  
+  const towersList = window.towers || [];
+  let updatedCount = 0;
+  
+  towersList.forEach((tower, index) => {
+    const currentLevel = tower.level || 1;
+    const maxLevelForType = (tower.id === 'gold' || tower.id === 'research') ? 20 : 50;
+    
+    // Calculer le niveau cible effectif (limité par le max)
+    const effectiveTargetLevel = Math.min(globalTargetLevel, maxLevelForType);
+    
+    // Ne mettre à jour que si le niveau cible est supérieur au niveau actuel
+    if (effectiveTargetLevel > currentLevel) {
+      const targetLevelInput = document.getElementById(`target-level-${index}`);
+      if (targetLevelInput) {
+        targetLevelInput.value = effectiveTargetLevel;
+        updateMultiUpgradeCostSilent(index);
+        updatedCount++;
+      }
+    }
+  });
+  
+  if (updatedCount > 0) {
+    showToast(`✅ Niveau ${globalTargetLevel} appliqué à ${updatedCount} tour(s)`, 'success');
+  } else {
+    showToast('ℹ️ Aucune tour à mettre à jour', 'info');
+  }
+}
+
+function resetAllTargetLevels() {
+  const towersList = window.towers || [];
+  let resetCount = 0;
+  
+  towersList.forEach((tower, index) => {
+    const currentLevel = tower.level || 1;
+    const targetLevelInput = document.getElementById(`target-level-${index}`);
+    const btnMulti = document.getElementById(`btn-multi-${index}`);
+    
+    if (targetLevelInput) {
+      targetLevelInput.value = currentLevel;
+      resetCount++;
+    }
+    
+    if (btnMulti) {
+      btnMulti.textContent = `🚀 0 💰`;
+      btnMulti.disabled = true;
+    }
+  });
+  
+  if (resetCount > 0) {
+    showToast(`🔄 ${resetCount} calcul(s) réinitialisé(s) !`, 'success');
+  }
 }
 
 // Changer le mode de ciblage d'une tour depuis la liste

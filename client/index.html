@@ -399,6 +399,18 @@
               </div>
             </div>
             
+            <div id="tower-menu-dpm-row" class="stat-row upgrade-row">
+              <div class="stat-col">
+                <span class="stat-label">📊 DPM</span>
+                <span id="tower-menu-dpm-current" class="stat-value">0</span>
+              </div>
+              <span class="upgrade-arrow">→</span>
+              <div class="stat-col">
+                <span class="stat-label">Après amélioration</span>
+                <span id="tower-menu-dpm-next" class="stat-value upgrade">0</span>
+              </div>
+            </div>
+            
             <div id="tower-menu-research-row" class="stat-row upgrade-row" style="display: none;">
               <div class="stat-col">
                 <span class="stat-label">🔬 Bonus Recherche</span>
@@ -523,6 +535,9 @@
       <div class="towers-modal-content">
         <div class="towers-header-modal">
           <h2>🏰 Gestion des Tours</h2>
+          <div class="towers-money-display">
+            <span id="towers-modal-money">💰 0</span>
+          </div>
           <button onclick="toggleTowersPanel()" class="btn-close-modal">✖️</button>
         </div>
         <div id="towers-list-content" class="towers-list-content">

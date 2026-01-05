@@ -1,5 +1,6 @@
 // Fonction pour calculer le coût d'amélioration d'une tour
 function getTowerUpgradeCost(baseUpgradeCost, currentLevel) {
+  // Prix x2 tous les 5 niveaux par rapport au prix précédent
   const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
   return baseUpgradeCost * multiplier;
 }
@@ -44,15 +45,109 @@ if (typeof socket !== 'undefined' && socket !== null) {
     const idx = towers.findIndex(t => t.x === tower.x && t.y === tower.y);
     if (idx !== -1) {
       towers[idx] = { ...towers[idx], ...tower };
+      
+      // Mettre à jour le label de niveau si la tour a un sprite
+      if (towers[idx].levelText) {
+        towers[idx].levelText.setText(`${tower.level}`);
+      }
+      
+      // Animation d'amélioration
+      if (towers[idx].sprite && gameScene) {
+        gameScene.tweens.add({
+          targets: towers[idx].sprite,
+          scaleX: 1.3,
+          scaleY: 1.3,
+          duration: 150,
+          yoyo: true,
+          ease: 'Power2'
+        });
+      }
     }
+    
     playerMoney = money;
-    // Mettre à jour l'affichage du coût suivant si besoin
+    
+    // Mettre à jour le modal de tour s'il est ouvert pour cette tour
     if (selectedTower && selectedTower.x === tower.x && selectedTower.y === tower.y) {
-      const costElem = document.getElementById('tower-upgrade-cost');
-      if (costElem) costElem.textContent = `${upgradeCost} 💰`;
-      selectedTower.level = tower.level;
+      selectedTower = { ...selectedTower, ...tower };
+      
+      // Rafraîchir complètement l'affichage du modal
+      const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
+      if (towerConfig) {
+        // Mettre à jour le titre
+        const menuTitle = document.getElementById('tower-menu-title');
+        if (menuTitle) menuTitle.textContent = `${towerConfig.name} - Niveau ${tower.level}`;
+        
+        const menuLevel = document.getElementById('tower-menu-level');
+        if (menuLevel) menuLevel.textContent = tower.level;
+        
+        // Mettre à jour les stats actuelles
+        const dmgCurrent = document.getElementById('tower-menu-damage-current');
+        if (dmgCurrent) dmgCurrent.textContent = (tower.damage || 0).toFixed(1);
+        
+        const currentMultiplier = tower.fireRate ? (1000 / tower.fireRate).toFixed(2) : '1.00';
+        const frCurrent = document.getElementById('tower-menu-firerate-current');
+        if (frCurrent) frCurrent.textContent = `${currentMultiplier}x`;
+        
+        // Mettre à jour le coût du prochain niveau
+        const costElem = document.getElementById('tower-upgrade-cost');
+        if (costElem) costElem.textContent = `${upgradeCost} 💰`;
+        
+        // Calculer les stats du prochain niveau
+        const defenseBonuses = getDefenseBonuses();
+        const currentDamage = tower.damage || towerConfig.damage;
+        const currentFireRate = tower.fireRate || towerConfig.fireRate;
+        const currentMultiplierValue = 1000 / currentFireRate;
+        
+        let newDamage = currentDamage;
+        let newFireRateMultiplier = currentMultiplierValue;
+        
+        if (selectedTower.id === 'basic') {
+          newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+          newFireRateMultiplier = currentMultiplierValue + 0.10;
+        } else if (selectedTower.id === 'sniper') {
+          if (tower.level < 5) {
+            newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+          } else {
+            newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+            newFireRateMultiplier = currentMultiplierValue + 0.10;
+          }
+        } else if (selectedTower.id === 'rapid') {
+          newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+          newFireRateMultiplier = currentMultiplierValue + 0.20;
+        } else {
+          newDamage = currentDamage + (towerConfig.damageUpgrade || 0) * (1 + defenseBonuses.damageBonus / 100);
+        }
+        
+        const dmgNext = document.getElementById('tower-menu-damage-next');
+        if (dmgNext) dmgNext.textContent = newDamage.toFixed(1);
+        
+        const frNext = document.getElementById('tower-menu-firerate-next');
+        if (frNext) frNext.textContent = `${newFireRateMultiplier.toFixed(2)}x`;
+        
+        // Vérifier si niveau max atteint
+        const maxLevel = (selectedTower.id === 'gold' || selectedTower.id === 'research') ? 20 : 
+          (typeof getMaxTowerSize === 'function' ? getMaxTowerSize() : 50);
+        const upgradeButton = document.querySelector('.btn-upgrade-main');
+        if (upgradeButton) {
+          if (tower.level >= maxLevel) {
+            upgradeButton.disabled = true;
+            upgradeButton.style.opacity = '0.5';
+            upgradeButton.style.cursor = 'not-allowed';
+            upgradeButton.textContent = '🔒 Niveau MAX';
+          } else {
+            upgradeButton.disabled = false;
+            upgradeButton.style.opacity = '1';
+            upgradeButton.style.cursor = 'pointer';
+            upgradeButton.textContent = '⬆️ Améliorer';
+          }
+        }
+      }
     }
+    
+    // Mettre à jour toutes les interfaces
     if (typeof updateUI === 'function') updateUI();
+    if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
+    
     showToast('Tour améliorée !', 'success');
   });
 }
@@ -283,9 +378,9 @@ function addTowerToScene(towerData) {
 
   towerGraphics.forEach(g => container.add(g));
 
-  const levelText = gameScene.add.text(0, 20, `Nv.${enhancedTowerData.level || 1}`, {
+  const levelText = gameScene.add.text(0, 25, `${enhancedTowerData.level || 1}`, {
     fontSize: '16px', 
-    fill: '#ffff00',
+    fill: '#ffffff',
     fontStyle: 'bold',
     stroke: '#000',
     strokeThickness: 3,
@@ -478,6 +573,16 @@ function openTowerMenu(towerData, container) {
   
   const frNext = document.getElementById('tower-menu-firerate-next');
   if (frNext) frNext.textContent = `${newFireRateMultiplier}x`;
+  
+  // Calculer et afficher le DPM (Dégâts Par Minute)
+  const dpmCurrent = Math.floor((currentDamage * 60000) / currentFireRate);
+  const dpmNext = Math.floor((newDamage * 60000) / newFireRate);
+  
+  const dpmCurrentElem = document.getElementById('tower-menu-dpm-current');
+  if (dpmCurrentElem) dpmCurrentElem.textContent = dpmCurrent.toLocaleString();
+  
+  const dpmNextElem = document.getElementById('tower-menu-dpm-next');
+  if (dpmNextElem) dpmNextElem.textContent = dpmNext.toLocaleString();
   
   const upgradeCostElem = document.getElementById('tower-upgrade-cost');
   if (upgradeCostElem) upgradeCostElem.textContent = `${upgradeCost} 💰`;
@@ -757,46 +862,11 @@ function moveTower(x, y) {
     return;
   }
   
-  // Appliquer le déplacement localement (sans attendre le serveur)
+  // Sauvegarder les anciennes coordonnées
   const oldX = movingTower.x;
   const oldY = movingTower.y;
   
-  // Supprimer l'ancienne position des cellules occupées
-  towerCells.delete(`${oldX},${oldY}`);
-  
-  // Mettre à jour la position de la tour
-  movingTower.x = x;
-  movingTower.y = y;
-  movingTower.sprite.setPosition(x, y);
-  
-  // Mettre à jour le cercle de portée
-  if (movingTower.rangeCircle) {
-    movingTower.rangeCircle.setPosition(x, y);
-  }
-  
-  // Mettre à jour les auras si présentes
-  if (movingTower.goldAura) {
-    movingTower.goldAura.setPosition(x, y);
-  }
-  if (movingTower.researchAura) {
-    movingTower.researchAura.setPosition(x, y);
-  }
-  
-  // Mettre à jour les icônes d'abilities
-  if (movingTower.abilityIcons && movingTower.abilityIcons.length > 0) {
-    movingTower.abilityIcons.forEach((icon, index) => {
-      icon.setPosition(x + index * 15 - 15, y - 45);
-    });
-  }
-  
-  // Ajouter la nouvelle position aux cellules occupées
-  towerCells.add(`${x},${y}`);
-  
-  // Déduire le coût
-  playerMoney -= MOVE_TOWER_COST;
-  updateUI();
-  
-  // Envoyer la mise à jour au serveur
+  // Envoyer la demande de déplacement au serveur
   if (socket) {
     socket.emit(CONSTANTS.SOCKET_EVENTS.MOVE_TOWER, {
       oldX: oldX,
@@ -806,19 +876,56 @@ function moveTower(x, y) {
     });
   }
   
-  // Restaurer l'opacité de la tour
-  movingTower.sprite.setAlpha(1);
+  // Le serveur répondra avec TOWER_MOVED qui appliquera le déplacement
+  // En attendant, on laisse la tour en mode preview
+  movingTower.sprite.setPosition(x, y);
+  movingTower.sprite.setAlpha(0.7);
   
-  // Nettoyer le cercle de preview
-  if (towerRangePreview) {
-    towerRangePreview.destroy();
-    towerRangePreview = null;
+  // NE PAS modifier movingTower.x et movingTower.y ici !
+  // Cela empêcherait de retrouver la tour dans TOWER_MOVED
+  // Les coordonnées seront mises à jour lors de la réponse du serveur
+  
+  // Mettre à jour le cercle de portée pour qu'il suive visuellement
+  if (movingTower.rangeCircle) {
+    movingTower.rangeCircle.setPosition(x, y);
   }
   
-  // Mettre à jour selectedTower pour pointer vers la tour déplacée
-  selectedTower = movingTower;
+  // Mettre à jour les auras spéciales (gold/research)
+  if (movingTower.goldAura) {
+    movingTower.goldAura.setPosition(x, y);
+  }
+  if (movingTower.researchAura) {
+    movingTower.researchAura.setPosition(x, y);
+  }
   
-  showToast(`✅ Tour déplacée ! (-${MOVE_TOWER_COST} 💰)`, 'success');
+  // Mettre à jour les icônes d'abilities pour qu'elles suivent
+  if (movingTower.abilityIcons && movingTower.abilityIcons.length > 0) {
+    movingTower.abilityIcons.forEach((icon, index) => {
+      if (icon && icon.setPosition) {
+        icon.setPosition(
+          x + index * 15 - 15,
+          y - 45
+        );
+      }
+    });
+  }
+  
+  // Le levelText est dans le container, pas besoin de le repositionner
+  // car il suivra automatiquement le container
+  
+  // Mettre à jour le cercle de preview
+  if (towerRangePreview) {
+    towerRangePreview.setPosition(x, y);
+  }
+  
+  // Sauvegarder la référence pour TOWER_MOVED
+  window.lastMovedTower = {
+    oldX: oldX,
+    oldY: oldY,
+    newX: x,
+    newY: y,
+    tower: movingTower
+  };
   
   movingTower = null;
   window.movingTower = null;
@@ -826,6 +933,13 @@ function moveTower(x, y) {
 
 function upgradeTower() {
   if (!selectedTower) return;
+  
+  // MORT SUBITE : Bloquer les améliorations après vague 60
+  if (monsterLevel > 60) {
+    showToast('❌ MORT SUBITE : Améliorations interdites !', 'error');
+    return;
+  }
+  
   const towerConfig = CONSTANTS.TOWER_TYPES[selectedTower.id.toUpperCase()];
   if (!towerConfig) return;
   const currentLevel = selectedTower.level || 1;

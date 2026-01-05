@@ -854,7 +854,7 @@ body {
 }
 
 .right-panel {
-  width: 170px;
+  width: 140px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2231,10 +2231,18 @@ body {
 }
 
 .ability-btn.purchased {
-  background: rgba(46, 204, 113, 0.3);
-  border-color: #2ecc71;
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.4) 0%, rgba(39, 174, 96, 0.5) 100%);
+  border-color: #27ae60;
+  border-width: 3px;
   cursor: default;
-  opacity: 0.7;
+  opacity: 1;
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+}
+
+.ability-btn.purchased .ability-cost {
+  color: #2ecc71;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
 }
 
 .ability-icon {

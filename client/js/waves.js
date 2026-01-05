@@ -43,7 +43,7 @@ function updateGameTime() {
   if (gameTime === 45) {
     maxSpawnUnits = 10; // Augmente après 45s
     monsterHealthMultiplier = 1.2 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 2;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 2 ! Les Tanks arrivent !');
@@ -52,7 +52,7 @@ function updateGameTime() {
   if (gameTime === 75) {
     maxSpawnUnits = 15; // Augmente après 75s
     monsterHealthMultiplier = 1.4 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 3;
     updateMonsterHPDisplay();
     showNotification('🔥 Vague 3 ! Les Rapides et Diviseurs arrivent !');
@@ -61,7 +61,7 @@ function updateGameTime() {
   if (gameTime === 105) {
     maxSpawnUnits = 20; // Augmente après 105s
     monsterHealthMultiplier = 1.6 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 4;
     updateMonsterHPDisplay();
     showNotification('⚠️ Vague 4 ! Préparez-vous !');
@@ -70,7 +70,7 @@ function updateGameTime() {
   if (gameTime === 315) {
     maxSpawnUnits += 5;
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 10;
     updateMonsterHPDisplay();
     showNotification('💀 Manche 10 ! Les BOSS arrivent enfin !');
@@ -79,7 +79,7 @@ function updateGameTime() {
   if (gameTime > 105 && gameTime < 315 && gameTime % 30 === 0) {
     maxSpawnUnits += 2; // Augmentation plus faible avant les boss
     monsterHealthMultiplier += 0.1 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
     updateMonsterHPDisplay();
     showNotification(`🌟 Vague ${monsterLevel} !`);
@@ -88,13 +88,23 @@ function updateGameTime() {
   if (gameTime > 315 && gameTime % 30 === 0) {
     maxSpawnUnits += 5; // Augmente plus rapidement après les boss
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
-    // rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0); // Désactivé - gain d'or constant
+    rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
     updateMonsterHPDisplay();
-    showNotification(`🌟 Vague ${monsterLevel} !`);
+    
+    // MORT SUBITE après vague 60
+    if (monsterLevel > 60) {
+      showNotification(`💀⚠️ MORT SUBITE - VAGUE ${monsterLevel} - SEULS LES TITANS SPAWNERONT ! AMÉLIORATIONS INTERDITES !`);
+      // Bloquer les améliorations de tours
+      if (typeof disableTowerUpgrades === 'function') {
+        disableTowerUpgrades();
+      }
+    } else {
+      showNotification(`🌟 Vague ${monsterLevel} !`);
+    }
     
     // À partir de la vague 20, spawn massif
-    if (monsterLevel >= 20) {
+    if (monsterLevel >= 20 && monsterLevel <= 60) {
       // Multiplier le budget de spawn par 3 à partir de la vague 20
       maxSpawnUnits = Math.floor(maxSpawnUnits * 1.5);
       showNotification(`⚠️ VAGUE ${monsterLevel} - INVASION MASSIVE !`);
@@ -184,26 +194,31 @@ function autoSpawnMonster() {
     return;
   }
   
-  // Vérifier s'il faut initier un combo (30% de chance toutes les 8-10 secondes après 45s)
-  if (!comboActive && gameTime > 45 && gameTime % (8 + Math.floor(Math.random() * 3)) === 0) {
-    if (Math.random() < 0.3) {
-      initializeCombo();
-    }
-  }
-  
   let monsterType;
   
-  // Si un combo est actif, spawn du monstre du combo
-  if (comboActive && comboCount > 0) {
-    monsterType = comboType;
-    comboCount--;
-    if (comboCount === 0) {
-      comboActive = false;
-    }
+  // MORT SUBITE : Après la vague 60, spawn uniquement des Titans
+  if (monsterLevel > 60) {
+    monsterType = 'BIGBOSS';
   } else {
-    // Sinon, spawn aléatoire normal
-    const availableTypes = getAvailableMonsterTypes();
-    monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    // Vérifier s'il faut initier un combo (30% de chance toutes les 8-10 secondes après 45s)
+    if (!comboActive && gameTime > 45 && gameTime % (8 + Math.floor(Math.random() * 3)) === 0) {
+      if (Math.random() < 0.3) {
+        initializeCombo();
+      }
+    }
+  
+    // Si un combo est actif, spawn du monstre du combo
+    if (comboActive && comboCount > 0) {
+      monsterType = comboType;
+      comboCount--;
+      if (comboCount === 0) {
+        comboActive = false;
+      }
+    } else {
+      // Sinon, spawn aléatoire normal
+      const availableTypes = getAvailableMonsterTypes();
+      monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    }
   }
   
   let spawned = false;

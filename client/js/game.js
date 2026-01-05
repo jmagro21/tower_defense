@@ -236,6 +236,9 @@ function update(time, delta) {
   // Tir des tours
   const towersList = window.towers || (typeof towers !== 'undefined' ? towers : []);
   towersList.forEach(tower => {
+    // Ne pas tirer si la tour est paralysée
+    if (tower.isStunned) return;
+    
     // Décrémenter le cooldown en fonction du delta time (en ms)
     // On normalise pour que le cooldown soit en ms au lieu de frames
     tower.cooldown -= delta;

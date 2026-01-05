@@ -8,7 +8,7 @@
  * @returns {number} coût d'amélioration
  */
 function getTowerUpgradeCost(baseUpgradeCost, currentLevel) {
-  // Prix x2 tous les 5 niveaux
+  // Prix x2 tous les 5 niveaux par rapport au prix précédent
   const multiplier = Math.pow(2, Math.floor(currentLevel / 5));
   return baseUpgradeCost * multiplier;
 }

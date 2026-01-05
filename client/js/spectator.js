@@ -4,6 +4,7 @@ let spectatorCanvas = null;
 let spectatorCtx = null;
 let spectatorInterval = null;
 let spectatorData = null;
+let isSpectatorLocked = false; // Empêcher les clics multiples rapides
 
 // Couleurs des tours
 const TOWER_COLORS = {
@@ -31,6 +32,32 @@ const MONSTER_COLORS = {
 function spectatePlayer(username) {
   if (!username || username === currentUser?.username) return;
   
+  // Debounce - empêcher les clics multiples rapides
+  if (isSpectatorLocked) {
+    console.log('Spectateur verrouillé, attendez...');
+    return;
+  }
+  isSpectatorLocked = true;
+  setTimeout(() => { isSpectatorLocked = false; }, 500);
+  
+  // Vérifier si le joueur existe et est encore en vie
+  if (typeof playersStats !== 'undefined' && playersStats) {
+    const targetPlayer = playersStats.find(p => p.username === username);
+    if (!targetPlayer) {
+      showToast('Ce joueur n\'existe pas !', 'error');
+      return;
+    }
+    if (!targetPlayer.isAlive) {
+      showToast('Ce joueur est éliminé !', 'warning');
+      return;
+    }
+  }
+  
+  // Fermer le modal existant si déjà ouvert
+  if (spectatingPlayer) {
+    closeSpectator();
+  }
+  
   spectatingPlayer = username;
   
   // Afficher le modal
@@ -39,25 +66,35 @@ function spectatePlayer(username) {
     createSpectatorModal();
   }
   
-  document.getElementById('spectator-modal').classList.remove('hidden');
+  const modalElement = document.getElementById('spectator-modal');
+  if (!modalElement) return;
+  
+  modalElement.classList.remove('hidden');
   document.getElementById('spectator-player-name').textContent = username;
   
   // Initialiser le canvas
   spectatorCanvas = document.getElementById('spectator-canvas');
+  if (!spectatorCanvas) return;
+  
   spectatorCtx = spectatorCanvas.getContext('2d');
+  
+  // Nettoyer l'intervalle précédent
+  if (spectatorInterval) {
+    clearInterval(spectatorInterval);
+    spectatorInterval = null;
+  }
   
   // Demander les données au serveur
   if (socket) {
     socket.emit('spectatePlayer', { username: username });
   }
   
-  // Démarrer la mise à jour périodique (toutes les 500ms)
-  if (spectatorInterval) clearInterval(spectatorInterval);
+  // Démarrer la mise à jour périodique (toutes les 1000ms pour éviter la surcharge)
   spectatorInterval = setInterval(() => {
     if (socket && spectatingPlayer) {
       socket.emit('spectatePlayer', { username: spectatingPlayer });
     }
-  }, 500);
+  }, 1000);
   
   showToast(`👁️ Observation de ${username}...`, 'info');
 }
@@ -94,27 +131,42 @@ function createSpectatorModal() {
 }
 
 function closeSpectator() {
-  spectatingPlayer = null;
-  spectatorData = null;
-  
+  // Nettoyer l'intervalle en premier
   if (spectatorInterval) {
     clearInterval(spectatorInterval);
     spectatorInterval = null;
   }
   
+  // Informer le serveur qu'on arrête d'observer (avant de nettoyer les variables)
+  if (socket && spectatingPlayer) {
+    socket.emit('stopSpectating');
+  }
+  
+  // Nettoyer les variables
+  spectatingPlayer = null;
+  spectatorData = null;
+  
+  // Fermer le modal
   const modal = document.getElementById('spectator-modal');
   if (modal) {
     modal.classList.add('hidden');
   }
   
-  // Informer le serveur qu'on arrête d'observer
-  if (socket) {
-    socket.emit('stopSpectating');
+  // Nettoyer le canvas
+  if (spectatorCanvas && spectatorCtx) {
+    spectatorCtx.clearRect(0, 0, spectatorCanvas.width, spectatorCanvas.height);
   }
 }
 
 function updateSpectatorView(data) {
-  if (!data || !spectatorCtx || !spectatingPlayer) return;
+  if (!data || !spectatorCtx || !spectatingPlayer || !spectatorCanvas) return;
+  
+  // Vérifier que le modal est toujours visible
+  const modal = document.getElementById('spectator-modal');
+  if (!modal || modal.classList.contains('hidden')) {
+    closeSpectator();
+    return;
+  }
   
   spectatorData = data;
   

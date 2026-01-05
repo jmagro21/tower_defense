@@ -5,30 +5,31 @@
 .level-selector-container {
   margin: 15px 0;
   padding: 15px;
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  border: 2px solid #3498db;
-  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #0f3460;
+  border-radius: 8px;
 }
 
 .level-selector-label {
   display: block;
   margin-bottom: 10px;
-  color: #3498db;
+  color: #ffd700;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 13px;
+  text-transform: uppercase;
 }
 
 .level-selector-controls {
   display: flex;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .level-input {
   flex: 1;
   padding: 10px;
   background: #16213e;
-  border: 2px solid #0f3460;
+  border: 2px solid #667eea;
   border-radius: 6px;
   color: white;
   font-size: 16px;
@@ -39,67 +40,86 @@
 
 .level-input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 .btn-calculate {
-  padding: 10px 15px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  border: 2px solid #2980b9;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   border-radius: 6px;
   color: white;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-calculate:hover {
-  background: linear-gradient(135deg, #5dade2 0%, #3498db 100%);
+  background: linear-gradient(135deg, #7889ef 0%, #8e5cb8 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-calculate::before {
+  content: "🔍";
 }
 
 .multi-upgrade-info {
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 6px;
-  margin-top: 10px;
+  border: 1px solid #667eea;
 }
 
 .upgrade-cost-display {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .upgrade-cost-display span:first-child {
-  color: #ecf0f1;
-  font-size: 13px;
+  color: #aaa;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: bold;
 }
 
 .cost-value {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
-  color: #2ecc71;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cost-value::after {
+  content: "💰";
 }
 
 .btn-upgrade-multi {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
-  border: 2px solid #1e8449;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  border: none;
+  border-radius: 8px;
   color: white;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-upgrade-multi:hover {
@@ -110,6 +130,11 @@
 
 .btn-upgrade-multi:active {
   transform: translateY(0);
+}
+
+.btn-upgrade-multi::before {
+  content: "⬆️";
+  font-size: 16px;
 }
 
 /* Animation d'apparition */

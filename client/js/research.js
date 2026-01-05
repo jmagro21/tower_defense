@@ -392,20 +392,38 @@ function updateResearchProgressBar() {
   if (currentResearch) {
     const { category, research } = currentResearch;
     const researchData = researchTree[category][research];
-    const killsNeeded = getKillsRequiredForLevel(researchData.level + 1, category, research);
-    const progress = (researchKills / killsNeeded * 100);
+    
+    // Vérifier si la recherche est au niveau maximum
+    const isMaxLevel = researchData.level >= 25; // Niveau max pour les recherches
     
     // Afficher la section
     progressSection.classList.remove('hidden');
     
-    // Mettre à jour les éléments du modal
-    progressName.textContent = `${researchData.icon} ${researchData.name} (Nv.${researchData.level + 1})`;
-    progressText.textContent = `${researchKills}/${killsNeeded}`;
-    progressFill.style.width = progress + '%';
-    
-    // Mettre à jour la barre de progression du bouton
-    if (researchButton) {
-      researchButton.style.setProperty('--research-progress', progress + '%');
+    if (isMaxLevel) {
+      // Si niveau max, afficher un message spécial
+      progressName.textContent = `${researchData.icon} ${researchData.name} - ✅ NIVEAU MAX`;
+      progressText.textContent = 'MAX';
+      progressFill.style.width = '100%';
+      progressFill.style.background = 'linear-gradient(90deg, #27ae60 0%, #2ecc71 100%)';
+      
+      // Mettre la barre à 100%
+      if (researchButton) {
+        researchButton.style.setProperty('--research-progress', '100%');
+      }
+    } else {
+      const killsNeeded = getKillsRequiredForLevel(researchData.level + 1, category, research);
+      const progress = (researchKills / killsNeeded * 100);
+      
+      // Affichage normal
+      progressName.textContent = `${researchData.icon} ${researchData.name} (Nv.${researchData.level + 1})`;
+      progressText.textContent = `${researchKills}/${killsNeeded}`;
+      progressFill.style.width = progress + '%';
+      progressFill.style.background = ''; // Réinitialiser le style
+      
+      // Mettre à jour la barre de progression du bouton
+      if (researchButton) {
+        researchButton.style.setProperty('--research-progress', progress + '%');
+      }
     }
   } else {
     // Masquer la section si aucune recherche n'est en cours

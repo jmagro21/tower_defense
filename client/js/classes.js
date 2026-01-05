@@ -321,7 +321,7 @@ function applyEngineerClassActive() {
         tower.fireRate = Math.floor(towerData.fireRate / (1 + (tower.level - 1) * 0.15) / (1 + attackSpeedBonus / 100));
         // Update level label
         if (tower.levelText) {
-          tower.levelText.setText(`Nv.${tower.level}`);
+          tower.levelText.setText(`${tower.level}`);
         }
         // Animation
         if (tower.sprite && gameScene) {

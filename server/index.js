@@ -43,7 +43,16 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(express.static(path.join(__dirname, '../client')));
+// Configuration des MIME types pour les fichiers statiques
+app.use(express.static(path.join(__dirname, '../client'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

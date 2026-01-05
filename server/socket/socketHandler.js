@@ -286,10 +286,11 @@ module.exports = (io) => {
         const newMultiplier = currentMultiplier + 0.10;
         tower.fireRate = Math.max(200, Math.floor(1000 / newMultiplier));
       } else if (tower.id === 'sniper') {
-        // Sniper: niveau 1-5 = range et dégats, niveau 5+ = dégats et +0.10x cadence
+        // Sniper: niveau 1-5 = range et dégats, niveau 6+ = dégats et +0.10x cadence
         if (tower.level <= 5) {
           tower.range = (tower.range || towerConfig.range) + 50;
           tower.damage += towerConfig.damageUpgrade || 0;
+          // Pas de bonus de cadence pour les 5 premiers niveaux
         } else {
           tower.damage += towerConfig.damageUpgrade || 0;
           const currentMultiplier = 1000 / tower.fireRate;
@@ -313,6 +314,10 @@ module.exports = (io) => {
         if (tower.level <= 20) {
           tower.damage += towerConfig.damageUpgrade || 0;
         }
+        // Pas de bonus de cadence
+      } else if (tower.id === 'electric') {
+        // Tesla: seulement dégâts, AUCUN bonus de cadence
+        tower.damage += towerConfig.damageUpgrade || 0;
         // Pas de bonus de cadence
       }
 
@@ -379,6 +384,7 @@ module.exports = (io) => {
           if (tower.level <= 5) {
             tower.range = (tower.range || towerConfig.range) + 50;
             tower.damage += towerConfig.damageUpgrade || 0;
+            // Pas de bonus de cadence pour les 5 premiers niveaux
           } else {
             tower.damage += towerConfig.damageUpgrade || 0;
             const currentMultiplier = 1000 / tower.fireRate;
@@ -391,10 +397,9 @@ module.exports = (io) => {
           const newMultiplier = currentMultiplier + 0.20;
           tower.fireRate = Math.max(100, Math.floor(1000 / newMultiplier));
         } else if (tower.id === 'electric') {
+          // Tesla: seulement dégâts, AUCUN bonus de cadence
           tower.damage += towerConfig.damageUpgrade || 0;
-          const currentMultiplier = 1000 / tower.fireRate;
-          const newMultiplier = currentMultiplier + 0.15;
-          tower.fireRate = Math.max(300, Math.floor(1000 / newMultiplier));
+          // Pas de bonus de cadence
         }
       }
 

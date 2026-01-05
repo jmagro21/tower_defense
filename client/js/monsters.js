@@ -612,6 +612,10 @@ function electricAttack(tower, targets) {
   
   const stunDuration = CONSTANTS.TOWER_TYPES.ELECTRIC.stunDuration || 500;
   
+  // Utiliser la position du sprite pour supporter le déplacement visuel pendant la latence
+  const towerX = tower.sprite && tower.sprite.x !== undefined ? tower.sprite.x : tower.x;
+  const towerY = tower.sprite && tower.sprite.y !== undefined ? tower.sprite.y : tower.y;
+  
   // Effet visuel : éclairs partant de la tour vers chaque cible
   targets.forEach(monster => {
     if (!monster.sprite || !monster.sprite.active) return;
@@ -622,8 +626,8 @@ function electricAttack(tower, targets) {
     lightning.setDepth(100);
     
     // Dessiner un éclair en zigzag
-    const startX = tower.x;
-    const startY = tower.y;
+    const startX = towerX;
+    const startY = towerY;
     const endX = monster.sprite.x;
     const endY = monster.sprite.y;
     
@@ -665,7 +669,7 @@ function electricAttack(tower, targets) {
   
   // Son/effet visuel sur la tour
   if (gameScene) {
-    const shockwave = gameScene.add.circle(tower.x, tower.y, 20, 0x00ffff, 0.5);
+    const shockwave = gameScene.add.circle(towerX, towerY, 20, 0x00ffff, 0.5);
     shockwave.setDepth(99);
     
     gameScene.tweens.add({
@@ -761,7 +765,11 @@ function shootAtMonster(tower, monster) {
     projectileSize = 2;
   }
 
-  const projectile = gameScene.add.circle(tower.x, tower.y, projectileSize, projectileColor);
+  // Utiliser la position du sprite pour supporter le déplacement visuel pendant la latence
+  const towerX = tower.sprite && tower.sprite.x !== undefined ? tower.sprite.x : tower.x;
+  const towerY = tower.sprite && tower.sprite.y !== undefined ? tower.sprite.y : tower.y;
+  
+  const projectile = gameScene.add.circle(towerX, towerY, projectileSize, projectileColor);
   projectile.setDepth(100);
   
   // Stocker la référence du monstre cible
@@ -1473,10 +1481,14 @@ function stunTower(tower, duration) {
   tower.isStunned = true;
   tower.stunEndTime = Date.now() + duration;
   
+  // Utiliser la position du sprite pour supporter le déplacement visuel pendant la latence
+  const towerX = tower.sprite && tower.sprite.x !== undefined ? tower.sprite.x : tower.x;
+  const towerY = tower.sprite && tower.sprite.y !== undefined ? tower.sprite.y : tower.y;
+  
   // Créer l'effet visuel de stun
   if (!tower.stunEffect && tower.sprite && gameScene) {
     // Cercle rouge semi-transparent autour de la tour
-    const stunCircle = gameScene.add.circle(tower.x, tower.y, tower.range * 0.3, 0xff0000, 0.3);
+    const stunCircle = gameScene.add.circle(towerX, towerY, tower.range * 0.3, 0xff0000, 0.3);
     stunCircle.setStrokeStyle(3, 0xff0000, 0.8);
     stunCircle.setDepth(50);
     tower.stunEffect = stunCircle;
@@ -1492,7 +1504,7 @@ function stunTower(tower, duration) {
     });
     
     // Icône d'éclair au-dessus de la tour
-    const stunIcon = gameScene.add.text(tower.x, tower.y - 35, '⚡', {
+    const stunIcon = gameScene.add.text(towerX, towerY - 35, '⚡', {
       fontSize: '20px',
       fill: '#ffff00',
       stroke: '#ff0000',
@@ -1505,7 +1517,7 @@ function stunTower(tower, duration) {
     // Animation de l'icône
     gameScene.tweens.add({
       targets: stunIcon,
-      y: tower.y - 40,
+      y: towerY - 40,
       duration: 300,
       yoyo: true,
       repeat: Math.ceil(duration / 600)

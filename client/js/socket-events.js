@@ -78,7 +78,7 @@ function setupGameEvents() {
       
       // Mettre à jour le texte du niveau
       if (tower.levelText && tower.levelText.active) {
-        tower.levelText.setText(`Nv.${tower.level}`);
+        tower.levelText.setText(`${tower.level}`);
       }
       
       // Mettre à jour le cercle de portée
@@ -102,16 +102,25 @@ function setupGameEvents() {
       });
     }
     updateUI();
+    if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
   });
 
   socket.on('TOWER_MOVED', (data) => {
     playerMoney = data.money;
     
-    // Vérifier si la tour déplacée était sélectionnée
-    const wasSelected = selectedTower && selectedTower.x === data.oldX && selectedTower.y === data.oldY;
-    
     // Trouver la tour par son ancienne position
-    const towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
+    let towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
+    if (towerIndex === -1) {
+      console.error('❌ Tour non trouvée pour déplacement:', { oldX: data.oldX, oldY: data.oldY, towers: towers.map(t => ({ x: t.x, y: t.y })) });
+      return;
+    }
+    
+    const oldTower = towers[towerIndex];
+    
+    // Vérifier si la tour déplacée était sélectionnée
+    const wasSelected = selectedTower && 
+      (selectedTower === oldTower || 
+       (selectedTower.x === data.oldX && selectedTower.y === data.oldY));
     if (towerIndex !== -1) {
       const oldTower = towers[towerIndex];
       
@@ -173,15 +182,33 @@ function setupGameEvents() {
         
         // Si la tour était sélectionnée, mettre à jour selectedTower et rouvrir le menu
         if (wasSelected) {
+          // IMPORTANT: Mettre à jour selectedTower avec la nouvelle référence
           selectedTower = newTower;
+          // Rouvrir le menu pour rafraîchir l'interface
           openTowerMenu(newTower, newTower.sprite);
+          console.log('✅ selectedTower mis à jour après déplacement:', { x: selectedTower.x, y: selectedTower.y, level: selectedTower.level });
         }
+      } else {
+        console.error('❌ Nouvelle tour non trouvée après déplacement:', { x: data.tower.x, y: data.tower.y });
       }
       
-      showToast('✅ Tour déplacée !', 'success');
+      // Synchroniser window.towers
+      window.towers = towers;
+      
+      // Nettoyer le cercle de preview si présent
+      if (towerRangePreview) {
+        towerRangePreview.destroy();
+        towerRangePreview = null;
+      }
+      
+      // Nettoyer la référence lastMovedTower
+      window.lastMovedTower = null;
+      
+      showToast(`✅ Tour déplacée ! (-25 💰)`, 'success');
     }
     
     updateUI();
+    if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
   });
 
   socket.on('TOWER_SOLD', (data) => {
