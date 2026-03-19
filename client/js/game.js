@@ -111,6 +111,7 @@ function create() {
       }
       movingTower = null;
       window.movingTower = null;
+      window.isTowerMoveInProgress = false;
       showToast('❌ Déplacement annulé', 'info');
       return;
     }
@@ -149,6 +150,8 @@ function create() {
   monsterHealthMultiplier = 1;
   rewardMultiplier = 1;
   window.towers = [];
+  window.isTowerMoveInProgress = false;
+  window.lastMovedTower = null;
   monsters = [];
   
   // Initialiser le classement avec le joueur actuel

@@ -108,10 +108,33 @@ function setupGameEvents() {
   socket.on('TOWER_MOVED', (data) => {
     playerMoney = data.money;
     
-    // Trouver la tour par son ancienne position
-    let towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
+    // Trouver la tour: on cherche d'abord par la référence directe (la plus fiable),
+    // puis par les nouvelles coordonnées (mises à jour optimistiquement),
+    // puis par les anciennes coordonnées (fallback)
+    let towerIndex = -1;
+    
+    // 1. Par référence directe via lastMovedTower
+    if (window.lastMovedTower && window.lastMovedTower.tower) {
+      towerIndex = towers.findIndex(t => t === window.lastMovedTower.tower);
+    }
+    
+    // 2. Par les nouvelles coordonnées (optimistic update a déjà mis à jour x/y)
     if (towerIndex === -1) {
-      console.error('❌ Tour non trouvée pour déplacement:', { oldX: data.oldX, oldY: data.oldY, towers: towers.map(t => ({ x: t.x, y: t.y })) });
+      towerIndex = towers.findIndex(t => t.x === data.tower.x && t.y === data.tower.y);
+    }
+    
+    // 3. Fallback: anciennes coordonnées (si optimistic update n'a pas eu lieu)
+    if (towerIndex === -1) {
+      towerIndex = towers.findIndex(t => t.x === data.oldX && t.y === data.oldY);
+    }
+    
+    if (towerIndex === -1) {
+      console.error('❌ Tour non trouvée pour déplacement:', { 
+        oldX: data.oldX, oldY: data.oldY, 
+        newX: data.tower.x, newY: data.tower.y,
+        towers: towers.map(t => ({ x: t.x, y: t.y })) 
+      });
+      window.isTowerMoveInProgress = false;
       return;
     }
     
@@ -120,92 +143,96 @@ function setupGameEvents() {
     // Vérifier si la tour déplacée était sélectionnée
     const wasSelected = selectedTower && 
       (selectedTower === oldTower || 
+       (selectedTower.x === data.tower.x && selectedTower.y === data.tower.y) ||
        (selectedTower.x === data.oldX && selectedTower.y === data.oldY));
-    if (towerIndex !== -1) {
-      const oldTower = towers[towerIndex];
+    
+    // S'assurer que les cellules sont correctes
+    // (moveTower() a déjà libéré l'ancienne et occupé la nouvelle, mais on s'assure)
+    freeCell(data.oldX, data.oldY);
+    
+    // Sauvegarder les données importantes de l'ancienne tour
+    const savedData = {
+      targetMode: oldTower.targetMode || 'nearest_end',
+      abilities: oldTower.abilities || [],
+      abilityIcons: oldTower.abilityIcons || []
+    };
+    
+    // Supprimer les éléments graphiques HORS du container (ne pas double-destroy les enfants)
+    // Note: levelText est un enfant du container, il sera détruit automatiquement avec lui
+    if (oldTower.rangeCircle) oldTower.rangeCircle.destroy();
+    if (oldTower.goldAura) oldTower.goldAura.destroy();
+    if (oldTower.researchAura) oldTower.researchAura.destroy();
+    if (oldTower.stunEffect) oldTower.stunEffect.destroy();
+    if (oldTower.stunIcon) oldTower.stunIcon.destroy();
+    if (savedData.abilityIcons) {
+      savedData.abilityIcons.forEach(icon => {
+        if (icon && icon.destroy) icon.destroy();
+      });
+    }
+    // Détruire le container EN DERNIER (détruit aussi ses enfants : graphics + levelText)
+    if (oldTower.sprite) oldTower.sprite.destroy();
+    
+    // Retirer de la liste des tours
+    towers.splice(towerIndex, 1);
+    
+    // Recréer la tour à la nouvelle position avec toutes ses stats
+    const newTowerData = {
+      ...data.tower,
+      x: data.tower.x,
+      y: data.tower.y
+    };
+    
+    // Ajouter la tour à la scène (cette fonction gère tout le visuel)
+    try {
+      addTowerToScene(newTowerData);
+    } catch (e) {
+      console.error('❌ Erreur lors de la recréation de la tour:', e);
+      window.isTowerMoveInProgress = false;
+      return;
+    }
+    
+    // Occuper la nouvelle case (s'assurer même si moveTower l'a déjà fait)
+    occupyCell(data.tower.x, data.tower.y);
+    
+    // Restaurer les données sauvegardées sur la nouvelle tour
+    const newTower = towers.find(t => t.x === data.tower.x && t.y === data.tower.y);
+    if (newTower) {
+      newTower.targetMode = savedData.targetMode;
+      newTower.abilities = savedData.abilities;
       
-      // Libérer l'ancienne case
-      freeCell(data.oldX, data.oldY);
-      
-      // Sauvegarder les données importantes de l'ancienne tour
-      const savedData = {
-        targetMode: oldTower.targetMode || 'nearest_end',
-        abilities: oldTower.abilities || [],
-        abilityIcons: oldTower.abilityIcons || []
-      };
-      
-      // Supprimer tous les éléments graphiques de l'ancienne tour
-      if (oldTower.sprite) oldTower.sprite.destroy();
-      if (oldTower.rangeCircle) oldTower.rangeCircle.destroy();
-      if (oldTower.goldAura) oldTower.goldAura.destroy();
-      if (oldTower.researchAura) oldTower.researchAura.destroy();
-      if (oldTower.levelText) oldTower.levelText.destroy();
-      if (oldTower.stunEffect) oldTower.stunEffect.destroy();
-      if (oldTower.stunIcon) oldTower.stunIcon.destroy();
-      if (savedData.abilityIcons) {
-        savedData.abilityIcons.forEach(icon => {
-          if (icon && icon.destroy) icon.destroy();
+      // Recréer les icônes de compétences
+      if (savedData.abilities && savedData.abilities.length > 0) {
+        savedData.abilities.forEach(abilityId => {
+          const ability = CONSTANTS.TOWER_ABILITIES[abilityId.toUpperCase()];
+          if (ability) {
+            addAbilityIndicator(newTower, ability);
+          }
         });
       }
       
-      // Retirer de la liste des tours
-      towers.splice(towerIndex, 1);
-      
-      // Recréer la tour à la nouvelle position avec toutes ses stats
-      const newTowerData = {
-        ...data.tower,
-        x: data.tower.x,
-        y: data.tower.y
-      };
-      
-      // Ajouter la tour à la scène (cette fonction gère tout le visuel)
-      addTowerToScene(newTowerData);
-      
-      // Occuper la nouvelle case
-      occupyCell(data.tower.x, data.tower.y);
-      
-      // Restaurer les données sauvegardées sur la nouvelle tour
-      const newTower = towers.find(t => t.x === data.tower.x && t.y === data.tower.y);
-      if (newTower) {
-        newTower.targetMode = savedData.targetMode;
-        newTower.abilities = savedData.abilities;
-        
-        // Recréer les icônes de compétences
-        if (savedData.abilities && savedData.abilities.length > 0) {
-          savedData.abilities.forEach(abilityId => {
-            const ability = CONSTANTS.TOWER_ABILITIES[abilityId.toUpperCase()];
-            if (ability) {
-              addAbilityIndicator(newTower, ability);
-            }
-          });
-        }
-        
-        // Si la tour était sélectionnée, mettre à jour selectedTower et rouvrir le menu
-        if (wasSelected) {
-          // IMPORTANT: Mettre à jour selectedTower avec la nouvelle référence
-          selectedTower = newTower;
-          // Rouvrir le menu pour rafraîchir l'interface
-          openTowerMenu(newTower, newTower.sprite);
-          console.log('✅ selectedTower mis à jour après déplacement:', { x: selectedTower.x, y: selectedTower.y, level: selectedTower.level });
-        }
-      } else {
-        console.error('❌ Nouvelle tour non trouvée après déplacement:', { x: data.tower.x, y: data.tower.y });
+      // Si la tour était sélectionnée, mettre à jour selectedTower et rouvrir le menu
+      if (wasSelected) {
+        selectedTower = newTower;
+        openTowerMenu(newTower, newTower.sprite);
       }
-      
-      // Synchroniser window.towers
-      window.towers = towers;
-      
-      // Nettoyer le cercle de preview si présent
-      if (towerRangePreview) {
-        towerRangePreview.destroy();
-        towerRangePreview = null;
-      }
-      
-      // Nettoyer la référence lastMovedTower
-      window.lastMovedTower = null;
-      
-      showToast(`✅ Tour déplacée ! (-25 💰)`, 'success');
+    } else {
+      console.error('❌ Nouvelle tour non trouvée après déplacement:', { x: data.tower.x, y: data.tower.y });
     }
+    
+    // Synchroniser window.towers
+    window.towers = towers;
+    
+    // Nettoyer le cercle de preview si présent
+    if (towerRangePreview) {
+      towerRangePreview.destroy();
+      towerRangePreview = null;
+    }
+    
+    // Nettoyer les références de déplacement
+    window.lastMovedTower = null;
+    window.isTowerMoveInProgress = false;
+    
+    showToast(`✅ Tour déplacée ! (-25 💰)`, 'success');
     
     updateUI();
     if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
@@ -217,11 +244,10 @@ function setupGameEvents() {
     if (towerIndex !== -1) {
       const tower = towers[towerIndex];
       freeCell(tower.x, tower.y);
-      if (tower.sprite) tower.sprite.destroy();
+      // Détruire les éléments hors container d'abord
       if (tower.rangeCircle) tower.rangeCircle.destroy();
       if (tower.goldAura) tower.goldAura.destroy();
       if (tower.researchAura) tower.researchAura.destroy();
-      if (tower.levelText) tower.levelText.destroy();
       if (tower.stunEffect) tower.stunEffect.destroy();
       if (tower.stunIcon) tower.stunIcon.destroy();
       if (tower.abilityIcons) {
@@ -229,7 +255,10 @@ function setupGameEvents() {
           if (icon && icon.destroy) icon.destroy();
         });
       }
+      // Détruire le container en dernier (levelText est un enfant, détruit automatiquement)
+      if (tower.sprite) tower.sprite.destroy();
       towers.splice(towerIndex, 1);
+      window.towers = towers;
       showToast(`Tour vendue ! +${data.refund}💰`, 'success');
     }
     updateUI();

@@ -818,6 +818,12 @@ function closeTowerMenu() {
 function startMovingTower() {
   if (!selectedTower) return;
   
+  // Bloquer si un déplacement est déjà en cours
+  if (window.isTowerMoveInProgress) {
+    showToast('Un déplacement est déjà en cours !', 'warning');
+    return;
+  }
+  
   if (playerMoney < MOVE_TOWER_COST) {
     showToast('Pas assez d\'argent pour déplacer la tour !', 'warning');
     return;
@@ -845,6 +851,12 @@ function startMovingTower() {
 function moveTower(x, y) {
   if (!movingTower) return;
   
+  // Bloquer si un déplacement est déjà en cours (attente de réponse serveur)
+  if (window.isTowerMoveInProgress) {
+    showToast('Un déplacement est déjà en cours, patientez...', 'warning');
+    return;
+  }
+  
   // Snap sur la grille
   const snapped = snapToGrid(x, y);
   x = snapped.x;
@@ -866,6 +878,9 @@ function moveTower(x, y) {
   const oldX = movingTower.x;
   const oldY = movingTower.y;
   
+  // Marquer le déplacement comme en cours (empêche les double-moves)
+  window.isTowerMoveInProgress = true;
+  
   // Envoyer la demande de déplacement au serveur
   if (socket) {
     socket.emit(CONSTANTS.SOCKET_EVENTS.MOVE_TOWER, {
@@ -876,14 +891,24 @@ function moveTower(x, y) {
     });
   }
   
+  // Sauvegarder la référence AVANT de modifier quoi que ce soit
+  window.lastMovedTower = {
+    oldX: oldX,
+    oldY: oldY,
+    newX: x,
+    newY: y,
+    tower: movingTower
+  };
+  
   // Le serveur répondra avec TOWER_MOVED qui appliquera le déplacement
   // En attendant, on laisse la tour en mode preview
   movingTower.sprite.setPosition(x, y);
   movingTower.sprite.setAlpha(0.7);
   
-  // NE PAS modifier movingTower.x et movingTower.y ici !
-  // Cela empêcherait de retrouver la tour dans TOWER_MOVED
-  // Les coordonnées seront mises à jour lors de la réponse du serveur
+  // Mettre à jour les coordonnées logiques temporairement pour le ciblage
+  // (sera écrasé par la réponse serveur via addTowerToScene)
+  movingTower.x = x;
+  movingTower.y = y;
   
   // Mettre à jour le cercle de portée pour qu'il suive visuellement
   if (movingTower.rangeCircle) {
@@ -910,22 +935,15 @@ function moveTower(x, y) {
     });
   }
   
-  // Le levelText est dans le container, pas besoin de le repositionner
-  // car il suivra automatiquement le container
-  
-  // Mettre à jour le cercle de preview
+  // Nettoyer le cercle de preview de portée immédiatement
   if (towerRangePreview) {
-    towerRangePreview.setPosition(x, y);
+    towerRangePreview.destroy();
+    towerRangePreview = null;
   }
   
-  // Sauvegarder la référence pour TOWER_MOVED
-  window.lastMovedTower = {
-    oldX: oldX,
-    oldY: oldY,
-    newX: x,
-    newY: y,
-    tower: movingTower
-  };
+  // Mettre à jour l'occupation des cellules immédiatement
+  freeCell(oldX, oldY);
+  occupyCell(x, y);
   
   movingTower = null;
   window.movingTower = null;
