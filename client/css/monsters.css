@@ -90,3 +90,20 @@
 .send-monster-info strong {
   color: #ea6666;
 }
+
+/* Bouton Démolisseur - style spécial mort subite */
+.demolisher-btn {
+  background: linear-gradient(135deg, #b22222 0%, #ff4500 100%) !important;
+  border-color: #8b0000 !important;
+  animation: demolisher-pulse 2s ease-in-out infinite;
+}
+
+.demolisher-btn:hover {
+  background: linear-gradient(135deg, #cc3333 0%, #ff6347 100%) !important;
+  box-shadow: 0 4px 16px rgba(178, 34, 34, 0.7) !important;
+}
+
+@keyframes demolisher-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(255, 69, 0, 0.3); }
+  50% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.7); }
+}

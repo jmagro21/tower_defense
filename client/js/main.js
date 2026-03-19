@@ -25,9 +25,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const currentRoom = localStorage.getItem('currentRoom');
       
       if (gameState === 'playing' && currentRoom) {
-        // Réinitialiser vers le lobby si la partie est terminée
-        localStorage.removeItem('gameState');
-        localStorage.removeItem('currentRoom');
+        // Ne pas effacer l'état - tenter la reconnexion via le socket
+        // Le serveur vérifiera si la partie est toujours en cours
+        // et enverra l'événement RECONNECTED si c'est le cas
         showScreen('lobby-screen');
       } else {
         showScreen('lobby-screen');

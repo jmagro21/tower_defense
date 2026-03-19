@@ -48,13 +48,55 @@ function initSocket() {
     // Restaurer l'état du jeu si en cours
     if (data.roomState === 'playing') {
       showToast('🔄 Partie restaurée !', 'success');
-      // Le jeu continue, pas besoin de réinitialiser
+      
+      // Restaurer les paramètres de jeu
+      if (data.gameSettings) {
+        gameSettings = {
+          startingMoney: data.gameSettings.startingMoney || 500,
+          maxHealth: data.gameSettings.maxHealth || 20,
+          monsterIntensity: data.gameSettings.monsterIntensity || 1.0,
+          rewardMultiplier: data.gameSettings.rewardMultiplier || 1.0,
+          spawnSpeed: data.gameSettings.spawnSpeed || 'normal'
+        };
+        CONSTANTS.GAME.MONSTER_PASS_LIMIT = gameSettings.maxHealth;
+      }
+      
+      // Restaurer l'argent et la santé du joueur depuis le serveur
+      if (data.playerData) {
+        playerMoney = data.playerData.money || gameSettings.startingMoney;
+      }
+      
+      // Restaurer la map
+      if (data.mapId) {
+        window.selectedMap = data.mapId;
+      }
+      
+      // Initialiser les stats des joueurs
+      if (data.players) {
+        playersStats = data.players.map(p => ({
+          username: p.username,
+          health: p.health || 0,
+          kills: p.kills || 0,
+          money: p.money || 0
+        }));
+      }
+      
+      // Réinitialiser les kills locaux
+      playerKills = 0;
+      
+      localStorage.setItem('gameState', 'playing');
+      showScreen('game-screen');
+      initGame(data.players || []);
+    } else if (data.roomState === 'waiting') {
+      // Retourner dans le lobby de la salle
+      roomPlayers = (data.players || []);
+      showRoomScreen();
     }
   });
   
   // Un autre joueur est en train de se déconnecter (délai de grâce)
   socket.on('PLAYER_DISCONNECTING', (data) => {
-    showToast(`⏳ ${data.username} a perdu la connexion... (5s pour revenir)`, 'warning');
+    showToast(`⏳ ${data.username} a perdu la connexion... (30s pour revenir)`, 'warning');
   });
   
   // Un joueur s'est reconnecté

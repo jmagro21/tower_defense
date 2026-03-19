@@ -2,7 +2,7 @@
 let gameTime = 0;
 let spawnTimer = 0;
 let spawnUnitCapacity = 0; // Unités disponibles pour spawn cette période
-let maxSpawnUnits = 5; // Max d'unités par période de spawn
+let maxSpawnUnits = 5; // Max d'unités par période de spawn (valeur de BASE avant multiplicateur)
 let monsterLevel = 1;
 let monsterHealthMultiplier = 1;
 let rewardMultiplier = 1;
@@ -12,6 +12,23 @@ let comboType = 'basic'; // Type de monstre du combo
 let spawnInterval = 5; // Intervalle en secondes pour ajouter des unités
 let currentSpawnDelay = 5000; // Délai de spawn en ms (modifié selon les vagues)
 let titanSpawnedWave20 = false; // Flag pour spawn le titan une seule fois à la vague 20
+let spawnSpeedApplied = false; // Flag pour savoir si le spawnSpeed a été appliqué
+let suddenDeathActive = false; // Flag pour la mort subite
+
+// Obtenir le multiplicateur de spawn selon les paramètres (appliqué UNE SEULE FOIS aux transitions de vague)
+function getSpawnSpeedMultiplier() {
+  if (gameSettings.spawnSpeed === 'slow') return 0.6;
+  if (gameSettings.spawnSpeed === 'fast') return 1.5;
+  if (gameSettings.spawnSpeed === 'hard') return 2.5;
+  return 1.0; // normal
+}
+
+function getSpawnInterval() {
+  if (gameSettings.spawnSpeed === 'slow') return 8;
+  if (gameSettings.spawnSpeed === 'fast') return 3;
+  if (gameSettings.spawnSpeed === 'hard') return 2;
+  return 5; // normal
+}
 
 function updateGameTime() {
   gameTime++;
@@ -20,28 +37,23 @@ function updateGameTime() {
     showNotification('🎮 Les monstres arrivent !');
   }
   
-  // Appliquer les multiplicateurs selon les paramètres
-  if (gameSettings.spawnSpeed === 'slow') {
-    spawnInterval = 8;
-    maxSpawnUnits = Math.max(3, Math.floor(maxSpawnUnits * 0.6));
-  } else if (gameSettings.spawnSpeed === 'fast') {
-    spawnInterval = 3;
-    maxSpawnUnits = Math.floor(maxSpawnUnits * 1.5);
-  } else if (gameSettings.spawnSpeed === 'hard') {
-    spawnInterval = 2; // Très rapide
-    maxSpawnUnits = Math.floor(maxSpawnUnits * 3); // Triple les spawns
+  // Appliquer le spawnInterval UNE SEULE FOIS au début
+  if (!spawnSpeedApplied) {
+    spawnInterval = getSpawnInterval();
+    spawnSpeedApplied = true;
   }
   
   // Augmentation continue du budget de spawn (commence après 15s pour laisser le temps de choisir la classe)
-  if (gameTime >= 15 && gameTime % spawnInterval === 0 && gameTime <= 45) {
-    spawnUnitCapacity += maxSpawnUnits;
-  } else if (gameTime > 45 && gameTime % spawnInterval === 0) {
-    // Après 45s, continue à ajouter des unités mais au taux du maxSpawnUnits actuel
+  if (gameTime >= 15 && gameTime % spawnInterval === 0) {
     spawnUnitCapacity += maxSpawnUnits;
   }
   
+  // === TRANSITIONS DE VAGUE ===
+  // Les multiplicateurs de spawn sont appliqués UNE FOIS à chaque transition
+  
   if (gameTime === 45) {
-    maxSpawnUnits = 10; // Augmente après 45s
+    const mult = getSpawnSpeedMultiplier();
+    maxSpawnUnits = Math.max(3, Math.floor(10 * mult)); // Base 10, multiplié par le speed
     monsterHealthMultiplier = 1.2 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier = 1.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 2;
@@ -50,7 +62,8 @@ function updateGameTime() {
   }
   
   if (gameTime === 75) {
-    maxSpawnUnits = 15; // Augmente après 75s
+    const mult = getSpawnSpeedMultiplier();
+    maxSpawnUnits = Math.max(3, Math.floor(15 * mult));
     monsterHealthMultiplier = 1.4 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier = 1.4 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 3;
@@ -59,7 +72,8 @@ function updateGameTime() {
   }
 
   if (gameTime === 105) {
-    maxSpawnUnits = 20; // Augmente après 105s
+    const mult = getSpawnSpeedMultiplier();
+    maxSpawnUnits = Math.max(3, Math.floor(20 * mult));
     monsterHealthMultiplier = 1.6 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier = 1.6 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 4;
@@ -68,7 +82,8 @@ function updateGameTime() {
   }
   
   if (gameTime === 315) {
-    maxSpawnUnits += 5;
+    const mult = getSpawnSpeedMultiplier();
+    maxSpawnUnits = Math.max(3, Math.floor((maxSpawnUnits + 5) * 1.0)); // Pas de re-multiplication
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel = 10;
@@ -77,7 +92,7 @@ function updateGameTime() {
   }
 
   if (gameTime > 105 && gameTime < 315 && gameTime % 30 === 0) {
-    maxSpawnUnits += 2; // Augmentation plus faible avant les boss
+    maxSpawnUnits += Math.max(1, Math.floor(2 * getSpawnSpeedMultiplier())); // Augmentation linéaire
     monsterHealthMultiplier += 0.1 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier += 0.1 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
@@ -86,7 +101,9 @@ function updateGameTime() {
   }
 
   if (gameTime > 315 && gameTime % 30 === 0) {
-    maxSpawnUnits += 5; // Augmente plus rapidement après les boss
+    // Augmentation linéaire (pas exponentielle !)
+    const baseIncrease = monsterLevel >= 20 ? 8 : 5;
+    maxSpawnUnits += Math.max(1, Math.floor(baseIncrease * getSpawnSpeedMultiplier()));
     monsterHealthMultiplier += 0.2 * (gameSettings.monsterIntensity || 1.0);
     rewardMultiplier += 0.2 * (gameSettings.rewardMultiplier || 1.0);
     monsterLevel++;
@@ -94,20 +111,19 @@ function updateGameTime() {
     
     // MORT SUBITE après vague 60
     if (monsterLevel > 60) {
-      showNotification(`💀⚠️ MORT SUBITE - VAGUE ${monsterLevel} - SEULS LES TITANS SPAWNERONT ! AMÉLIORATIONS INTERDITES !`);
-      // Bloquer les améliorations de tours
-      if (typeof disableTowerUpgrades === 'function') {
+      if (!suddenDeathActive) {
+        suddenDeathActive = true;
+        showNotification(`💀⚠️ MORT SUBITE - SEULS LES TITANS SPAWNERONT ! AMÉLIORATIONS INTERDITES !`);
         disableTowerUpgrades();
+      } else {
+        showNotification(`💀 MORT SUBITE - VAGUE ${monsterLevel} !`);
       }
+      // Boost massif du spawn pour la mort subite
+      maxSpawnUnits = Math.max(maxSpawnUnits, 200);
+    } else if (monsterLevel >= 20) {
+      showNotification(`⚠️ VAGUE ${monsterLevel} - INVASION MASSIVE !`);
     } else {
       showNotification(`🌟 Vague ${monsterLevel} !`);
-    }
-    
-    // À partir de la vague 20, spawn massif
-    if (monsterLevel >= 20 && monsterLevel <= 60) {
-      // Multiplier le budget de spawn par 3 à partir de la vague 20
-      maxSpawnUnits = Math.floor(maxSpawnUnits * 1.5);
-      showNotification(`⚠️ VAGUE ${monsterLevel} - INVASION MASSIVE !`);
     }
   }
   
@@ -135,6 +151,11 @@ function updateGameTime() {
     currentSpawnDelay = 500;
     showNotification('🔥🔥 SPAWN ULTRA RAPIDE ! (0.5s)');
   }
+}
+
+// Bloquer les améliorations de tours pendant la mort subite
+function disableTowerUpgrades() {
+  suddenDeathActive = true;
 }
 
 function getAvailableMonsterTypes() {
@@ -197,38 +218,50 @@ function autoSpawnMonster() {
   let monsterType;
   
   // MORT SUBITE : Après la vague 60, spawn uniquement des Titans
-  if (monsterLevel > 60) {
-    monsterType = 'BIGBOSS';
-  } else {
-    // Vérifier s'il faut initier un combo (30% de chance toutes les 8-10 secondes après 45s)
-    if (!comboActive && gameTime > 45 && gameTime % (8 + Math.floor(Math.random() * 3)) === 0) {
-      if (Math.random() < 0.3) {
-        initializeCombo();
-      }
-    }
-  
-    // Si un combo est actif, spawn du monstre du combo
-    if (comboActive && comboCount > 0) {
-      monsterType = comboType;
-      comboCount--;
-      if (comboCount === 0) {
-        comboActive = false;
-      }
-    } else {
-      // Sinon, spawn aléatoire normal
-      const availableTypes = getAvailableMonsterTypes();
-      monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-    }
+  if (suddenDeathActive || monsterLevel > 60) {
+    monsterType = 'bigboss';
+    
+    // Forcer le spawn même si la capacité est faible (mort subite = pas de limite de cost)
+    const monsterData = { ...CONSTANTS.MONSTER_TYPES.BIGBOSS };
+    const attackBonuses = getAttackBonuses();
+    
+    monsterData.health = Math.floor(monsterData.health * monsterHealthMultiplier * 2 * (1 + attackBonuses.healthBonus / 100));
+    monsterData.speed = Math.floor(monsterData.speed * (1 + attackBonuses.speedBonus / 100));
+    monsterData.reward = Math.floor(monsterData.reward * rewardMultiplier * 3);
+    monsterData.level = monsterLevel;
+    
+    spawnMonster(monsterData);
+    spawnUnitCapacity = Math.max(0, spawnUnitCapacity - (monsterData.spawnCost || 50));
+    return;
   }
   
-  let spawned = false;
+  // Vérifier s'il faut initier un combo (30% de chance toutes les 8-10 secondes après 45s)
+  if (!comboActive && gameTime > 45 && gameTime % (8 + Math.floor(Math.random() * 3)) === 0) {
+    if (Math.random() < 0.3) {
+      initializeCombo();
+    }
+  }
+
+  // Si un combo est actif, spawn du monstre du combo
+  if (comboActive && comboCount > 0) {
+    monsterType = comboType;
+    comboCount--;
+    if (comboCount === 0) {
+      comboActive = false;
+    }
+  } else {
+    // Sinon, spawn aléatoire normal
+    const availableTypes = getAvailableMonsterTypes();
+    monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+  }
+  
   let attempts = 0;
   const maxAttempts = 10;
   
   // Essayer de spawn un monstre qui entre dans le budget
   while (attempts < maxAttempts && spawnUnitCapacity > 0) {
     const monsterData = { ...CONSTANTS.MONSTER_TYPES[monsterType.toUpperCase()] };
-    const cost = monsterData.spawnCost;
+    const cost = monsterData.spawnCost || 1; // Fallback à 1 si pas de spawnCost
     
     if (cost <= spawnUnitCapacity) {
       // Appliquer les bonus de recherche d'attaque
@@ -242,10 +275,12 @@ function autoSpawnMonster() {
       
       spawnMonster(monsterData);
       spawnUnitCapacity -= cost;
-      spawned = true;
       break;
     }
     
+    // Si ce type est trop cher, essayer un type moins cher
+    const availableTypes = getAvailableMonsterTypes();
+    monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     attempts++;
   }
 }

@@ -15,9 +15,9 @@ let gameSettings = {
 
 function updateUI() {
   document.getElementById('money').textContent = playerMoney;
-  // Arrondir les HP et garder le format "xx."
-  const remainingHealth = Math.ceil(gameSettings.maxHealth - playerHealth);
-  document.getElementById('health').textContent = remainingHealth + '.';
+  // Afficher les HP restants (arrondi sup)
+  const remainingHealth = Math.max(0, Math.ceil(gameSettings.maxHealth - playerHealth));
+  document.getElementById('health').textContent = remainingHealth;
   
   const minutes = Math.floor(gameTime / 60);
   const seconds = gameTime % 60;
@@ -142,6 +142,7 @@ function updateMonsterHPDisplay() {
   const invisibleHP = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.health * monsterHealthMultiplier);
   const bossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.health * monsterHealthMultiplier);
   const bigbossHP = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.health * monsterHealthMultiplier);
+  const demolisherHP = Math.floor(CONSTANTS.MONSTER_TYPES.DEMOLISHER.health * monsterHealthMultiplier);
   
   const basicElement = document.getElementById('basic-hp');
   const tankElement = document.getElementById('tank-hp');
@@ -152,6 +153,7 @@ function updateMonsterHPDisplay() {
   const invisibleElement = document.getElementById('invisible-hp');
   const bossElement = document.getElementById('boss-hp');
   const bigbossElement = document.getElementById('bigboss-hp');
+  const demolisherElement = document.getElementById('demolisher-hp');
   
   if (basicElement) basicElement.textContent = `${basicHP} HP`;
   if (tankElement) tankElement.textContent = `${tankHP} HP`;
@@ -162,6 +164,7 @@ function updateMonsterHPDisplay() {
   if (invisibleElement) invisibleElement.textContent = `${invisibleHP} HP`;
   if (bossElement) bossElement.textContent = `${bossHP} HP`;
   if (bigbossElement) bigbossElement.textContent = `${bigbossHP} HP`;
+  if (demolisherElement) demolisherElement.textContent = `${demolisherHP} HP`;
 }
 
 function updateMonsterCostDisplay() {
@@ -179,6 +182,7 @@ function updateMonsterCostDisplay() {
   const invisibleCost = Math.floor(CONSTANTS.MONSTER_TYPES.INVISIBLE.cost * (1 - costReduction));
   const bossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BOSS.cost * (1 - costReduction));
   const bigbossCost = Math.floor(CONSTANTS.MONSTER_TYPES.BIGBOSS.cost * (1 - costReduction));
+  const demolisherCost = Math.floor(CONSTANTS.MONSTER_TYPES.DEMOLISHER.cost * (1 - costReduction));
   
   const basicElement = document.getElementById('basic-cost');
   const tankElement = document.getElementById('tank-cost');
@@ -189,6 +193,7 @@ function updateMonsterCostDisplay() {
   const invisibleElement = document.getElementById('invisible-cost');
   const bossElement = document.getElementById('boss-cost');
   const bigbossElement = document.getElementById('bigboss-cost');
+  const demolisherElement = document.getElementById('demolisher-cost');
   
   if (basicElement) basicElement.textContent = `💰 ${basicCost}`;
   if (tankElement) tankElement.textContent = `💰 ${tankCost}`;
@@ -199,6 +204,13 @@ function updateMonsterCostDisplay() {
   if (invisibleElement) invisibleElement.textContent = `💰 ${invisibleCost}`;
   if (bossElement) bossElement.textContent = `💰 ${bossCost}`;
   if (bigbossElement) bigbossElement.textContent = `💰 ${bigbossCost}`;
+  if (demolisherElement) demolisherElement.textContent = `💰 ${demolisherCost}`;
+  
+  // Afficher/masquer le bouton du Démolisseur selon la mort subite
+  const demolisherBtn = document.querySelector('.demolisher-btn');
+  if (demolisherBtn) {
+    demolisherBtn.style.display = (typeof suddenDeathActive !== 'undefined' && suddenDeathActive) ? '' : 'none';
+  }
 }
 
 function showNotification(message) {
@@ -267,6 +279,12 @@ function sendMonster(monsterType) {
   const targetPlayer = document.getElementById('target-player').value;
   if (!targetPlayer) {
     showToast('Veuillez sélectionner un joueur cible', 'warning');
+    return;
+  }
+  
+  // Vérifier si le Démolisseur est utilisé hors mort subite
+  if (monsterType === 'demolisher' && (typeof suddenDeathActive === 'undefined' || !suddenDeathActive)) {
+    showToast('⛔ Le Démolisseur est uniquement disponible en Mort Subite !', 'error');
     return;
   }
   
@@ -348,7 +366,8 @@ function sendMonster(monsterType) {
     maxStuns: monsterData.maxStuns || 0,
     buffRadius: monsterData.buffRadius || 0,
     healthBuff: monsterData.healthBuff || 0,
-    spawnInterval: monsterData.spawnInterval || 0
+    spawnInterval: monsterData.spawnInterval || 0,
+    downgradeTower: monsterData.downgradeTower || false
   };
 
   // Envoyer à chaque joueur cible
@@ -443,15 +462,16 @@ function updateLeaderboard() {
     const leaderboardList = document.getElementById('leaderboard-list');
     if (!leaderboardList) return;
     
-    // Trier les joueurs par vie restante (descendant)
+    // Trier les joueurs: vivants d'abord, puis par HP restant (moins de monstres passés = mieux)
     const sortedPlayers = [...playersStats].sort((a, b) => {
       if (a.isAlive && !b.isAlive) return -1;
       if (!a.isAlive && b.isAlive) return 1;
-      return (b.health || 0) - (a.health || 0);
+      // Moins de health (monstres passés) = mieux, donc trier ascendant
+      return (a.health || 0) - (b.health || 0);
     });
     
     const html = sortedPlayers.map((player, index) => {
-      const health = CONSTANTS.GAME.MONSTER_PASS_LIMIT - (player.health || 0);
+      const health = Math.max(0, Math.ceil((gameSettings.maxHealth || CONSTANTS.GAME.MONSTER_PASS_LIMIT) - (player.health || 0)));
       const statusIcon = player.isAlive ? '✓' : '✗';
       const statusClass = player.isAlive ? 'alive' : 'eliminated';
       const rank = index + 1;

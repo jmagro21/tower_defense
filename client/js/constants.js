@@ -70,10 +70,10 @@ const CONSTANTS = {
       cost: 100,
       damage: 10,
       range: 150,
-      fireRate: 1500,
+      fireRate: 1000,
       upgradeCost: 50,
       damageUpgrade: 3,
-      fireRateUpgrade: -150
+      fireRateUpgrade: -100
     },
     SNIPER: {
       id: 'sniper',
@@ -81,10 +81,10 @@ const CONSTANTS = {
       cost: 200,
       damage: 50,
       range: 300,
-      fireRate: 3000,
+      fireRate: 2000,
       upgradeCost: 100,
       damageUpgrade: 15,
-      fireRateUpgrade: -300
+      fireRateUpgrade: -200
     },
     RAPID: {
       id: 'rapid',
@@ -92,10 +92,10 @@ const CONSTANTS = {
       cost: 150,
       damage: 5,
       range: 120,
-      fireRate: 800,
+      fireRate: 500,
       upgradeCost: 75,
       damageUpgrade: 1.5,
-      fireRateUpgrade: -75
+      fireRateUpgrade: -50
     },
     GOLD: {
       id: 'gold',
@@ -103,10 +103,10 @@ const CONSTANTS = {
       cost: 250,
       damage: 8,
       range: 180,
-      fireRate: 2000,
+      fireRate: 1300,
       upgradeCost: 80,
       damageUpgrade: 2,
-      fireRateUpgrade: -150,
+      fireRateUpgrade: -100,
       goldRadius: 150,
       goldMultiplier: 2
     },
@@ -116,10 +116,10 @@ const CONSTANTS = {
       cost: 300,
       damage: 3,
       range: 200,
-      fireRate: 1500,
+      fireRate: 1000,
       upgradeCost: 100,
       damageUpgrade: 1,
-      fireRateUpgrade: -100,
+      fireRateUpgrade: -80,
       researchKillsPerHit: 1,
       auraRadius: 150,
       slowPercent: 0.01, // 1% de ralentissement
@@ -131,7 +131,7 @@ const CONSTANTS = {
       cost: 500,
       damage: 15,
       range: 180,
-      fireRate: 5000, // 5 secondes
+      fireRate: 7000, // 7 secondes (sync avec serveur)
       upgradeCost: 150,
       damageUpgrade: 8,
       fireRateUpgrade: 0, // Pas d'amélioration de vitesse
@@ -183,8 +183,8 @@ const CONSTANTS = {
       name: 'Monstre Basique',
       cost: 50,
       health: 100,
-      speed: 30,
-      reward: 5,
+      speed: 35,
+      reward: 10,
       spawnCost: 1
     },
     TANK: {
@@ -192,8 +192,8 @@ const CONSTANTS = {
       name: 'Monstre Tank',
       cost: 150,
       health: 300,
-      speed: 18,
-      reward: 20,
+      speed: 20,
+      reward: 30,
       spawnCost: 3
     },
     FAST: {
@@ -202,7 +202,7 @@ const CONSTANTS = {
       cost: 100,
       health: 50,
       speed: 60,
-      reward: 12,
+      reward: 15,
       spawnCost: 2
     },
     SPLITTER: {
@@ -211,7 +211,7 @@ const CONSTANTS = {
       cost: 120,
       health: 150,
       speed: 40,
-      reward: 50,
+      reward: 25,
       spawnCost: 2.5,
       canSplit: true
     },
@@ -221,7 +221,7 @@ const CONSTANTS = {
       cost: 200,
       health: 200,
       speed: 25,
-      reward: 80,
+      reward: 40,
       spawnCost: 5,
       buffRadius: 100,
       healthBuff: 1.5
@@ -232,7 +232,7 @@ const CONSTANTS = {
       cost: 180,
       health: 180,
       speed: 35,
-      reward: 70,
+      reward: 35,
       spawnCost: 4,
       stunDuration: 2000,
       maxStuns: 2
@@ -243,7 +243,7 @@ const CONSTANTS = {
       cost: 250,
       health: 120,
       speed: 45,
-      reward: 90,
+      reward: 45,
       spawnCost: 5,
       isInvisible: true
     },
@@ -252,8 +252,8 @@ const CONSTANTS = {
       name: 'Boss',
       cost: 300,
       health: 1000,
-      speed: 12,
-      reward: 60,
+      speed: 10,
+      reward: 80,
       spawnCost: 20
     },
     BIGBOSS: {
@@ -262,7 +262,8 @@ const CONSTANTS = {
       cost: 10000,
       health: 15000,
       speed: 8,
-      reward: 2000,
+      reward: 1500,
+      spawnCost: 50,
       isInvisible: true,       // Invisible
       stunDuration: 3000,      // Paralyse pendant 3s
       maxStuns: 5,             // Paralyse les 5 premières tours
@@ -271,6 +272,17 @@ const CONSTANTS = {
       spawnInterval: 3000,     // Spawn un rapide toutes les 3s
       canSplitToBoss: true,    // Se divise en 5 boss à sa mort
       splitCount: 5            // Nombre de boss à spawn
+    },
+    DEMOLISHER: {
+      id: 'demolisher',
+      name: 'Démolisseur',
+      cost: 10000,
+      health: 5000,
+      speed: 15,
+      reward: 500,
+      spawnCost: 40,
+      suddenDeathOnly: true,   // Uniquement disponible en mort subite
+      downgradeTower: true     // Réduit le niveau de la tour qui le tue de 1
     }
   },
 

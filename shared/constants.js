@@ -228,6 +228,16 @@ module.exports = {
       speed: 45,
       reward: 70,
       isInvisible: true    // Invisible, seules les tours avec true_sight peuvent l'attaquer
+    },
+    DEMOLISHER: {
+      id: 'demolisher',
+      name: 'Démolisseur',
+      cost: 10000,
+      health: 5000,
+      speed: 15,
+      reward: 500,
+      suddenDeathOnly: true,   // Uniquement disponible en mort subite
+      downgradeTower: true     // Réduit le niveau de la tour qui le tue de 1
     }
   },
 

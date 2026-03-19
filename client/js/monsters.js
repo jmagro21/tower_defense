@@ -7,6 +7,17 @@ function spawnMonster(monsterData) {
   // (que ce soit depuis le serveur ou depuis autoSpawnMonster)
   // Donc on utilise directement les données sans les modifier
   
+  // === Buff des Paralyseurs en Mort Subite : HP x20, Vitesse x2 ===
+  if (monsterData.id === 'stunner' && (typeof suddenDeathActive !== 'undefined' && suddenDeathActive)) {
+    monsterData = { ...monsterData };
+    monsterData.health = Math.floor((monsterData.health || monsterData.currentHealth) * 20);
+    monsterData.currentHealth = monsterData.health;
+    monsterData.maxHealth = monsterData.health;
+    monsterData.baseHealth = monsterData.health;
+    monsterData.speed = Math.floor((monsterData.speed || monsterData.baseSpeed) * 2);
+    monsterData.baseSpeed = monsterData.speed;
+  }
+  
   // Déterminer la position initiale
   // Priorité: startX/startY fournis > pathIndex/progress > début du chemin
   let startX = path[0].x;
@@ -181,6 +192,59 @@ function spawnMonster(monsterData) {
       yoyo: true,
       repeat: -1
     });
+  } else if (monsterData.id === 'demolisher') {
+    // DÉMOLISSEUR - forme de bélier mécanique / wrecking ball
+    const body = gameScene.add.circle(0, 0, 18, 0xb22222);
+    const innerRing = gameScene.add.circle(0, 0, 14, 0x8b0000);
+    const core = gameScene.add.circle(0, 0, 8, 0xff4500);
+    
+    // Symbole de destruction (X) au centre
+    const line1 = gameScene.add.rectangle(0, 0, 16, 3, 0xffd700);
+    line1.setRotation(Math.PI / 4);
+    const line2 = gameScene.add.rectangle(0, 0, 16, 3, 0xffd700);
+    line2.setRotation(-Math.PI / 4);
+    
+    // Griffes/crochets
+    const claw1 = gameScene.add.triangle(-16, -8, -12, -14, -20, -6, 0xff6347);
+    const claw2 = gameScene.add.triangle(16, -8, 12, -14, 20, -6, 0xff6347);
+    const claw3 = gameScene.add.triangle(-16, 8, -12, 14, -20, 6, 0xff6347);
+    const claw4 = gameScene.add.triangle(16, 8, 12, 14, 20, 6, 0xff6347);
+    
+    // Particules de débris
+    const debris1 = gameScene.add.rectangle(-12, -16, 4, 4, 0xffa500, 0.6);
+    const debris2 = gameScene.add.rectangle(14, -12, 3, 3, 0xffa500, 0.5);
+    const debris3 = gameScene.add.rectangle(-10, 14, 3, 3, 0xff8c00, 0.5);
+    const debris4 = gameScene.add.rectangle(12, 12, 4, 4, 0xff8c00, 0.6);
+    
+    monsterGraphics = [body, innerRing, core, line1, line2, claw1, claw2, claw3, claw4, debris1, debris2, debris3, debris4];
+    
+    // Animation de rotation menaçante
+    gameScene.tweens.add({
+      targets: [line1, line2],
+      rotation: '+=6.28',
+      duration: 2000,
+      repeat: -1
+    });
+    
+    // Animation de pulsation du corps
+    gameScene.tweens.add({
+      targets: [core],
+      alpha: 0.4,
+      scale: 1.3,
+      duration: 600,
+      yoyo: true,
+      repeat: -1
+    });
+    
+    // Animation des débris
+    gameScene.tweens.add({
+      targets: [debris1, debris2, debris3, debris4],
+      y: '-=8',
+      alpha: 0,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1
+    });
   }
 
   monsterGraphics.forEach(g => container.add(g));
@@ -341,7 +405,7 @@ function spawnBigBossMinion(bigBoss) {
     return; // Ne pas spawn si limite atteinte
   }
   
-  // Liste des types de monstres que le Titan peut spawn (tous sauf bigboss)
+  // Liste des types de monstres que le Titan peut spawn (tous sauf bigboss et demolisher)
   const monsterTypes = ['basic', 'fast', 'tank', 'splitter', 'buffer', 'stunner', 'invisible', 'boss'];
   
   // Spawn 5 monstres
@@ -1259,10 +1323,106 @@ function killMonster(monster, isResearchKill = false, killerTower = null) {
       monsterId: monster.id,
       reward: finalReward
     });
-    playerMoney += finalReward;
+    // Appliquer le même multiplicateur que le serveur (0.7) pour éviter le flickering
+    // Le serveur enverra MONEY_UPDATE avec la valeur exacte qui corrigera si besoin
+    playerMoney += Math.floor(finalReward * 0.7);
   }
   // Ne pas incrémenter playerKills ici - le serveur est la source de vérité
   // et enverra les stats via PLAYERS_STATS_UPDATE
+  
+  // === DÉMOLISSEUR : Réduire le niveau de la tour qui l'a tué ===
+  if (monster.downgradeTower && killerTower) {
+    const towerIndex = towers.findIndex(t => t.x === killerTower.x && t.y === killerTower.y);
+    if (towerIndex !== -1) {
+      const tower = towers[towerIndex];
+      const currentLevel = tower.level || 1;
+      
+      if (currentLevel <= 1) {
+        // Tour niveau 1 → la détruire complètement
+        freeCell(tower.x, tower.y);
+        if (tower.sprite) tower.sprite.destroy();
+        if (tower.rangeCircle) tower.rangeCircle.destroy();
+        if (tower.goldAura) tower.goldAura.destroy();
+        if (tower.researchAura) tower.researchAura.destroy();
+        if (tower.levelText) tower.levelText.destroy();
+        if (tower.stunEffect) tower.stunEffect.destroy();
+        if (tower.stunIcon) tower.stunIcon.destroy();
+        if (tower.abilityIcons) {
+          tower.abilityIcons.forEach(icon => {
+            if (icon && icon.destroy) icon.destroy();
+          });
+        }
+        towers.splice(towerIndex, 1);
+        
+        // Informer le serveur
+        socket.emit('TOWER_DESTROYED_BY_DEMOLISHER', { x: tower.x, y: tower.y });
+        
+        showToast(`💥 DÉMOLISSEUR a détruit une tour !`, 'danger');
+        
+        // Effet visuel d'explosion
+        if (gameScene) {
+          const explosion = gameScene.add.circle(tower.x, tower.y, 10, 0xff4500, 0.8);
+          explosion.setDepth(100);
+          gameScene.tweens.add({
+            targets: explosion,
+            scale: 4,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => explosion.destroy()
+          });
+        }
+      } else {
+        // Réduire le niveau de 1
+        tower.level = currentLevel - 1;
+        
+        // Recalculer les stats de la tour
+        const towerConfig = CONSTANTS.TOWER_TYPES[tower.id.toUpperCase()];
+        if (towerConfig) {
+          const defenseBonuses = getDefenseBonuses();
+          const newLevel = tower.level;
+          // Recalculer les dégâts pour le nouveau niveau
+          const baseDamage = towerConfig.damage + (towerConfig.damageUpgrade * (newLevel - 1));
+          tower.damage = baseDamage * (1 + defenseBonuses.damageBonus / 100);
+          // Recalculer le fire rate
+          const baseFireRate = towerConfig.fireRate + (towerConfig.fireRateUpgrade * (newLevel - 1));
+          tower.fireRate = baseFireRate * (1 - defenseBonuses.attackSpeedBonus / 100);
+          // Recalculer la range si applicable
+          tower.range = towerConfig.range + ((newLevel - 1) * 5);
+        }
+        
+        // Mettre à jour le texte du niveau
+        if (tower.levelText && tower.levelText.active) {
+          tower.levelText.setText(`${tower.level}`);
+        }
+        // Mettre à jour le cercle de portée
+        if (tower.rangeCircle && tower.rangeCircle.active) {
+          tower.rangeCircle.setRadius(tower.range);
+        }
+        
+        // Informer le serveur
+        socket.emit('TOWER_DOWNGRADED_BY_DEMOLISHER', { x: tower.x, y: tower.y, newLevel: tower.level });
+        
+        showToast(`💥 DÉMOLISSEUR a rétrogradé une tour au niveau ${tower.level} !`, 'warning');
+        
+        // Effet visuel de dégradation
+        if (gameScene) {
+          const downgradeEffect = gameScene.add.circle(tower.x, tower.y, 15, 0xb22222, 0.6);
+          downgradeEffect.setDepth(100);
+          gameScene.tweens.add({
+            targets: downgradeEffect,
+            scale: 2.5,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => downgradeEffect.destroy()
+          });
+        }
+      }
+      
+      // Mettre à jour l'UI
+      updateUI();
+      if (typeof updateTowersPanelUI === 'function') updateTowersPanelUI();
+    }
+  }
   
   // Progression de la recherche en cours (tous les kills donnent +1)
   // Vérifier si le monstre est ACTUELLEMENT dans l'aura d'un laboratoire au moment de sa mort

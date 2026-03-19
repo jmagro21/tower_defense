@@ -87,11 +87,14 @@ module.exports = (io) => {
               
               console.log(`🔄 Joueur ${decoded.username} reconnecté au salon ${data.roomCode}`);
               
-              // Informer le joueur de sa reconnexion
+              // Informer le joueur de sa reconnexion avec toutes les données nécessaires
               socket.emit('RECONNECTED', {
                 roomCode: data.roomCode,
                 playerData: playerData,
-                roomState: room.state
+                roomState: room.state,
+                gameSettings: room.gameSettings || {},
+                mapId: room.getMap(),
+                players: room.getPlayerData()
               });
               
               // Informer les autres joueurs
@@ -470,6 +473,36 @@ module.exports = (io) => {
       });
     });
 
+    // Démolisseur : tour détruite
+    socket.on('TOWER_DESTROYED_BY_DEMOLISHER', ({ x, y }) => {
+      const roomCode = playerRooms.get(socket.id);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+
+      const player = room.players.get(socket.id);
+      if (!player) return;
+
+      const towerIndex = player.towers.findIndex(t => t.x === x && t.y === y);
+      if (towerIndex !== -1) {
+        player.towers.splice(towerIndex, 1);
+      }
+    });
+
+    // Démolisseur : tour rétrogradée
+    socket.on('TOWER_DOWNGRADED_BY_DEMOLISHER', ({ x, y, newLevel }) => {
+      const roomCode = playerRooms.get(socket.id);
+      const room = rooms.get(roomCode);
+      if (!room) return;
+
+      const player = room.players.get(socket.id);
+      if (!player) return;
+
+      const tower = player.towers.find(t => t.x === x && t.y === y);
+      if (tower) {
+        tower.level = newLevel;
+      }
+    });
+
     // Envoyer un monstre
     socket.on(SOCKET_EVENTS.SEND_MONSTER, ({ targetPlayer, monsterType, monster }) => {
       const roomCode = playerRooms.get(socket.id);
@@ -620,14 +653,14 @@ module.exports = (io) => {
       const playerData = room.players.get(socket.id);
       
       // Si c'est une déconnexion (pas un leave volontaire) et que la partie est en cours,
-      // donner un délai de grâce de 5 secondes pour se reconnecter
+      // donner un délai de grâce de 30 secondes pour se reconnecter
       if (!forceLeave && room.state === 'playing' && currentUser) {
-        console.log(`⏳ Délai de grâce de 5s pour ${currentUser.username}...`);
+        console.log(`⏳ Délai de grâce de 30s pour ${currentUser.username}...`);
         
         // Informer les autres joueurs
         socket.to(roomCode).emit('PLAYER_DISCONNECTING', {
           username: currentUser.username,
-          gracePeriod: 5000
+          gracePeriod: 30000
         });
         
         // Sauvegarder les données et programmer la suppression
@@ -637,7 +670,7 @@ module.exports = (io) => {
           
           // Maintenant vraiment supprimer le joueur
           finalizeDisconnect(socket.id, roomCode, room);
-        }, 5000);
+        }, 30000);
         
         disconnectedPlayers.set(socket.id, {
           timeout,

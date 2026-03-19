@@ -185,6 +185,18 @@ const MONSTER_VISUALS = {
     stats: ['PV: 15000', 'Stun: 3s', 'Split: 5 boss'],
     behavior: 'Cumule TOUTES les capacités spéciales',
     speed: 0.2
+  },
+  demolisher: {
+    name: 'Démolisseur',
+    icon: '💣',
+    bodyColor: '#b22222',
+    coreColor: '#ff4500',
+    clawColor: '#ff6347',
+    size: 18,
+    description: 'Quand il est tué par une tour, il réduit son niveau de 1 ! Si la tour est niveau 1, elle est détruite. Disponible uniquement en Mort Subite.',
+    stats: ['PV: 5000', 'Coût: 10000', 'Dégrade: -1 niv'],
+    behavior: 'Détruit la tour qui le tue',
+    speed: 0.3
   }
 };
 

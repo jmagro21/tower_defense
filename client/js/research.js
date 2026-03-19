@@ -30,7 +30,7 @@ function getKillsRequiredForLevel(level, category = null, research = null) {
 
 // Obtenir le bonus % en fonction du niveau
 function getResearchBonus(level) {
-  return level * 2; // +2% par level
+  return level * 5; // +5% par level (buff: anciennement 2%, trop faible)
 }
 
 // Fonction pour calculer les bonus actuels
@@ -40,9 +40,9 @@ function getAttackBonuses() {
   const cost = getResearchBonus(researchTree.attack.monsterCost.level);
   
   return {
-    healthBonus: health,     // +2% par level
-    speedBonus: speed,       // +2% par level
-    costReduction: cost      // -2% par level (réduit le coût)
+    healthBonus: health,     // +5% par level
+    speedBonus: speed,       // +5% par level
+    costReduction: cost      // -5% par level (réduit le coût)
   };
 }
 
@@ -52,9 +52,9 @@ function getDefenseBonuses() {
   const attackSpeed = getResearchBonus(researchTree.defense.towerAttackSpeed.level);
   
   return {
-    upgradeCostReduction: upgradeCost,  // -2% par level
-    damageBonus: damage,                // +2% par level
-    attackSpeedBonus: attackSpeed       // +2% par level
+    upgradeCostReduction: upgradeCost,  // -5% par level
+    damageBonus: damage,                // +5% par level
+    attackSpeedBonus: attackSpeed       // +5% par level
   };
 }
 
