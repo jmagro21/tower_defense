@@ -224,6 +224,109 @@ function initTooltipSystem() {
   if (tooltipCanvas) {
     tooltipCtx = tooltipCanvas.getContext('2d');
   }
+
+  // Initialiser le système de tooltips simples pour l'UI
+  initSimpleTooltips();
+}
+
+// ========================================
+// SYSTÈME DE TOOLTIPS SIMPLES POUR L'UI
+// ========================================
+let simpleTooltipEl = null;
+let simpleTooltipTimeout = null;
+
+function initSimpleTooltips() {
+  // Créer l'élément tooltip simple
+  if (!document.getElementById('simple-ui-tooltip')) {
+    simpleTooltipEl = document.createElement('div');
+    simpleTooltipEl.id = 'simple-ui-tooltip';
+    simpleTooltipEl.className = 'simple-ui-tooltip hidden';
+    document.body.appendChild(simpleTooltipEl);
+  } else {
+    simpleTooltipEl = document.getElementById('simple-ui-tooltip');
+  }
+
+  // Déléguer les événements hover sur tous les éléments avec data-ui-tooltip
+  document.addEventListener('mouseover', handleSimpleTooltipOver);
+  document.addEventListener('mouseout', handleSimpleTooltipOut);
+  document.addEventListener('mousemove', handleSimpleTooltipMove);
+}
+
+function handleSimpleTooltipOver(e) {
+  const target = e.target.closest('[data-ui-tooltip]');
+  if (!target) return;
+
+  const text = target.getAttribute('data-ui-tooltip');
+  if (!text || text.trim() === '') return;
+
+  // Délai avant d'afficher le tooltip
+  simpleTooltipTimeout = setTimeout(() => {
+    showSimpleTooltip(text, e.clientX, e.clientY);
+  }, 300);
+}
+
+function handleSimpleTooltipOut(e) {
+  const target = e.target.closest('[data-ui-tooltip]');
+  if (!target) return;
+
+  if (simpleTooltipTimeout) {
+    clearTimeout(simpleTooltipTimeout);
+    simpleTooltipTimeout = null;
+  }
+  hideSimpleTooltip();
+}
+
+function handleSimpleTooltipMove(e) {
+  if (simpleTooltipEl && !simpleTooltipEl.classList.contains('hidden')) {
+    positionSimpleTooltip(e.clientX, e.clientY);
+  }
+}
+
+function showSimpleTooltip(text, x, y) {
+  if (!simpleTooltipEl) return;
+
+  // Convertir les \n en <br> et formater
+  const formattedText = text
+    .replace(/\n/g, '<br>')
+    .replace(/(⚡ ACTIF:|🔄 PASSIF:|📊|💰 Coût:|✅|❌)/g, '<strong>$1</strong>');
+
+  simpleTooltipEl.innerHTML = formattedText;
+  simpleTooltipEl.classList.remove('hidden');
+  positionSimpleTooltip(x, y);
+}
+
+function positionSimpleTooltip(x, y) {
+  if (!simpleTooltipEl) return;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const tooltipRect = simpleTooltipEl.getBoundingClientRect();
+  const tooltipWidth = tooltipRect.width || 280;
+  const tooltipHeight = tooltipRect.height || 60;
+
+  let left = x + 12;
+  let top = y + 12;
+
+  // Débordement à droite
+  if (left + tooltipWidth > viewportWidth - 10) {
+    left = x - tooltipWidth - 12;
+  }
+  // Débordement en bas
+  if (top + tooltipHeight > viewportHeight - 10) {
+    top = y - tooltipHeight - 12;
+  }
+  // Garder dans la fenêtre
+  left = Math.max(10, left);
+  top = Math.max(10, top);
+
+  simpleTooltipEl.style.left = left + 'px';
+  simpleTooltipEl.style.top = top + 'px';
+}
+
+function hideSimpleTooltip() {
+  if (simpleTooltipEl) {
+    simpleTooltipEl.classList.add('hidden');
+  }
 }
 
 function showTowerTooltip(towerType, x, y) {

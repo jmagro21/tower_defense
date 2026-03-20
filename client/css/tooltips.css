@@ -172,3 +172,150 @@
   color: white;
   font-weight: bold;
 }
+
+/* ========================================
+   SIMPLE UI TOOLTIPS - Info-bulles simples
+   ======================================== */
+.simple-ui-tooltip {
+  position: fixed;
+  background: rgba(10, 15, 30, 0.97);
+  color: #e0e0e0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 320px;
+  min-width: 180px;
+  border: 1px solid rgba(102, 126, 234, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(102, 126, 234, 0.15);
+  backdrop-filter: blur(8px);
+  transition: opacity 0.15s ease;
+  opacity: 1;
+  word-wrap: break-word;
+}
+
+.simple-ui-tooltip.hidden {
+  display: none;
+  opacity: 0;
+}
+
+.simple-ui-tooltip strong {
+  color: #ffd700;
+}
+
+/* ========================================
+   GAME INFO BAR - Bandeau d'indicateurs
+   ======================================== */
+.game-info-bar {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 50%, #0d1b2a 100%);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 8px;
+  padding: 6px 12px;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.game-info-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.info-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: help;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.info-bar-item:hover {
+  background: rgba(102, 126, 234, 0.15);
+  transform: translateY(-1px);
+}
+
+.info-bar-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.info-bar-label {
+  font-size: 10px;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.info-bar-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: #4fc3f7;
+  min-width: 20px;
+  text-align: center;
+}
+
+.info-bar-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(102, 126, 234, 0.3);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Animations pour les valeurs qui changent */
+@keyframes infoBarPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); color: #ffd700; }
+  100% { transform: scale(1); }
+}
+
+.info-bar-value.pulse {
+  animation: infoBarPulse 0.5s ease;
+}
+
+/* Wave indicator colors */
+#wave-indicator .info-bar-value {
+  transition: color 0.5s ease;
+}
+
+/* Spawn budget colors */
+#spawn-indicator .info-bar-value {
+  transition: color 0.3s ease;
+}
+
+/* Active monsters styling */
+#active-monsters-list {
+  font-size: 13px !important;
+  letter-spacing: 1px;
+}
+
+/* Indicateur hover pour les stat-items du top panel */
+.stat-item[data-ui-tooltip] {
+  cursor: help;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.stat-item[data-ui-tooltip]:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Boutons du top panel avec tooltip */
+.top-panel button[data-ui-tooltip] {
+  position: relative;
+}
+
+.top-panel button[data-ui-tooltip]:hover {
+  filter: brightness(1.15);
+}

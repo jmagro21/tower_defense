@@ -25,6 +25,9 @@ function updateUI() {
   
   document.getElementById('attack-gold-display').textContent = playerAttackGold;
   
+  // Mettre à jour le bandeau d'indicateurs
+  updateGameInfoBar();
+  
   // Mettre à jour les stats du joueur actuel dans le classement
   if (playersStats.length > 0 && currentUser) {
     const playerIndex = playersStats.findIndex(p => p.username === currentUser.username);
@@ -1068,4 +1071,178 @@ function buyAugmentFromList(towerIndex, augmentId) {
   showToast(`${augment.icon} ${augment.name} acheté pour ${augment.cost} 💰 !`, 'success');
   updateTowersPanelUI();
   updateUI();
+}
+
+// ========================================
+// BANDEAU D'INDICATEURS DE JEU
+// ========================================
+
+// Mapping des icônes de monstres pour le bandeau
+const MONSTER_ICONS = {
+  basic: '🔴',
+  tank: '⬛',
+  fast: '🟠',
+  splitter: '🔀',
+  buffer: '➕',
+  stunner: '⚡',
+  invisible: '👻',
+  boss: '👿',
+  bigboss: '👹'
+};
+
+function updateGameInfoBar() {
+  // Manche actuelle
+  const waveEl = document.getElementById('wave-number');
+  if (waveEl) {
+    waveEl.textContent = monsterLevel || 1;
+    // Couleur selon la difficulté
+    if (monsterLevel > 60) {
+      waveEl.style.color = '#ff0000';
+      waveEl.parentElement.parentElement.setAttribute('data-ui-tooltip', 
+        `💀 MORT SUBITE ! Manche ${monsterLevel}. Seuls les Titans spawnent. Améliorations de tours interdites. Dernier survivant !`);
+    } else if (monsterLevel >= 20) {
+      waveEl.style.color = '#ff6600';
+      waveEl.parentElement.parentElement.setAttribute('data-ui-tooltip', 
+        `⚠️ Manche ${monsterLevel} - Invasion massive ! Tous les types de monstres, boss inclus. Spawn très rapide.`);
+    } else if (monsterLevel >= 10) {
+      waveEl.style.color = '#ffaa00';
+      waveEl.parentElement.parentElement.setAttribute('data-ui-tooltip', 
+        `🌟 Manche ${monsterLevel}. Les BOSS commencent à apparaître ! Spawn accéléré à 2.5s.`);
+    } else {
+      waveEl.style.color = '#4fc3f7';
+    }
+  }
+
+  // Budget de spawn
+  const spawnEl = document.getElementById('spawn-budget');
+  if (spawnEl) {
+    spawnEl.textContent = spawnUnitCapacity || 0;
+    if (spawnUnitCapacity > 100) {
+      spawnEl.style.color = '#ff4444';
+    } else if (spawnUnitCapacity > 50) {
+      spawnEl.style.color = '#ffaa00';
+    } else {
+      spawnEl.style.color = '#4fc3f7';
+    }
+  }
+
+  // Temps de jeu
+  const timeEl = document.getElementById('game-time-display');
+  if (timeEl) {
+    const minutes = Math.floor(gameTime / 60);
+    const seconds = gameTime % 60;
+    timeEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Monstres actifs (types qui spawnen actuellement)
+  const monstersEl = document.getElementById('active-monsters-list');
+  if (monstersEl && typeof getAvailableMonsterTypes === 'function') {
+    const types = getAvailableMonsterTypes();
+    const uniqueTypes = [...new Set(types)];
+    const icons = uniqueTypes.map(t => MONSTER_ICONS[t] || '❓');
+    monstersEl.textContent = icons.join(' ');
+    
+    // Tooltip dynamique avec les noms
+    const typeNames = {
+      basic: 'Basique', tank: 'Tank', fast: 'Rapide', splitter: 'Diviseur',
+      buffer: 'Soigneur', stunner: 'Paralyseur', invisible: 'Fantôme',
+      boss: 'Boss', bigboss: 'Titan'
+    };
+    const nameList = uniqueTypes.map(t => `${MONSTER_ICONS[t]} ${typeNames[t] || t}`).join(', ');
+    monstersEl.parentElement.setAttribute('data-ui-tooltip', 
+      `Monstres qui spawnen cette manche : ${nameList}. De nouveaux types se débloquent avec les manches.`);
+  }
+
+  // Prochain événement
+  const nextEl = document.getElementById('next-event-text');
+  if (nextEl) {
+    nextEl.textContent = getNextEventText();
+    nextEl.parentElement.setAttribute('data-ui-tooltip', getNextEventTooltip());
+  }
+
+  // Mettre à jour le tooltip du bouton de compétence
+  updateSkillTooltip();
+}
+
+function getNextEventText() {
+  if (gameTime < 15) {
+    return `Monstres dans ${15 - gameTime}s`;
+  }
+  
+  // Trouver le prochain événement de vague
+  const waveTimings = [
+    { time: 45, label: 'Vague 2' },
+    { time: 75, label: 'Vague 3' },
+    { time: 105, label: 'Vague 4' },
+    { time: 315, label: 'Manche 10' }
+  ];
+
+  for (const wave of waveTimings) {
+    if (gameTime < wave.time) {
+      const remaining = wave.time - gameTime;
+      return `${wave.label} dans ${remaining}s`;
+    }
+  }
+
+  // Après manche 10, prochain palier (toutes les 30s)
+  const nextPalier = Math.ceil(gameTime / 30) * 30;
+  const remaining = nextPalier - gameTime;
+  if (remaining > 0 && remaining <= 30) {
+    return `Manche ${monsterLevel + 1} dans ${remaining}s`;
+  }
+
+  if (monsterLevel > 60) {
+    return '💀 MORT SUBITE';
+  }
+  
+  return `Manche ${monsterLevel}`;
+}
+
+function getNextEventTooltip() {
+  if (gameTime < 15) {
+    return `Les premiers monstres arrivent dans ${15 - gameTime} secondes. Profitez-en pour placer vos premières tours !`;
+  }
+  if (gameTime < 45) {
+    return `Vague 2 dans ${45 - gameTime}s - Les Tanks arrivent ! Préparez des tours à gros dégâts.`;
+  }
+  if (gameTime < 75) {
+    return `Vague 3 dans ${75 - gameTime}s - Rapides et Diviseurs arrivent. Diversifiez vos défenses.`;
+  }
+  if (gameTime < 105) {
+    return `Vague 4 dans ${105 - gameTime}s - Les Soigneurs et Paralyseurs rejoignent la bataille.`;
+  }
+  if (gameTime < 315) {
+    return `Manche 10 dans ${315 - gameTime}s - Les BOSS feront leur apparition ! Renforcez vos tours.`;
+  }
+  if (monsterLevel > 60) {
+    return '💀 MORT SUBITE active ! Seuls les Titans spawnent. Pas d\'améliorations possibles. Dernière chance de survie !';
+  }
+  if (monsterLevel >= 20) {
+    return `Invasion massive active. Vague ${monsterLevel + 1} bientôt. Le spawn s'accélère continuellement.`;
+  }
+  return `Prochaine manche dans ~30s. Les monstres deviennent plus forts à chaque transition.`;
+}
+
+function updateSkillTooltip() {
+  const btn = document.getElementById('skill-button');
+  if (!btn || !playerClass) return;
+
+  const classData = PLAYER_CLASSES[playerClass];
+  if (!classData) return;
+
+  const currentCost = Math.floor(skillCost * Math.pow(skillCostMultiplier, skillUsageCount));
+  const canUse = playerAttackGold >= currentCost;
+
+  let tooltipText = `${classData.icon} ${classData.name}\n\n`;
+  tooltipText += `⚡ ACTIF: ${classData.active.name}\n`;
+  tooltipText += `${classData.active.description}\n`;
+  tooltipText += `💰 Coût: ${formatNumber(currentCost)} or d'attaque\n`;
+  tooltipText += canUse ? '✅ Utilisable maintenant !' : `❌ Il vous faut ${formatNumber(currentCost - playerAttackGold)} or d'attaque de plus`;
+  tooltipText += `\n\n🔄 PASSIF: ${classData.passive.name}\n`;
+  tooltipText += classData.passive.description;
+  if (skillUsageCount > 0) {
+    tooltipText += `\n\n📊 Utilisations: ${skillUsageCount} (coût +${Math.round((Math.pow(skillCostMultiplier, skillUsageCount) - 1) * 100)}%)`;
+  }
+
+  btn.setAttribute('data-ui-tooltip', tooltipText);
 }

@@ -176,8 +176,8 @@
       <div class="game-wrapper">
         <!-- Panneau gauche: Tours -->
         <div class="game-panel left-panel">
-          <button onclick="toggleTowersPanel()" class="btn-towers-header" id="towers-button" title="Gérer toutes les tours">🏗️ Tours</button>
-          <div id="tower-count" style="text-align: center; margin: 5px 0; font-size: 14px; color: #888;">0 / 20</div>
+          <button onclick="toggleTowersPanel()" class="btn-towers-header" id="towers-button" title="Gérer toutes les tours" data-ui-tooltip="Ouvrir la liste de toutes vos tours placées. Voir leurs stats, les améliorer ou les vendre.">🏗️ Tours</button>
+          <div id="tower-count" style="text-align: center; margin: 5px 0; font-size: 14px; color: #888;" data-ui-tooltip="Nombre de tours placées / maximum autorisé. Augmentez la limite via la recherche 'Taille max tours'.">0 / 20</div>
           <div class="tower-shop">
             <button class="tower-btn" data-tower="basic" ontouchstart="selectTower('basic', event)" onclick="selectTower('basic', event)">
               <div class="tower-icon">🔷</div>
@@ -222,38 +222,71 @@
         <div class="game-center">
           <!-- Haut: Stats -->
           <div class="game-panel top-panel">
-            <div class="stat-item">
+            <div class="stat-item" data-ui-tooltip="Votre or disponible pour acheter des tours et envoyer des monstres. Gagnez de l'or en tuant les monstres ennemis.">
               <span class="stat-icon">💰</span>
               <div class="stat-content">
                 <span class="stat-label">Argent</span>
                 <span class="stat-value" id="money">500</span>
               </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item" data-ui-tooltip="Points de vie restants. Quand un monstre atteint la fin du chemin, vous perdez des PV. À 0 PV, vous êtes éliminé !">
               <span class="stat-icon">❤️</span>
               <div class="stat-content">
                 <span class="stat-label">Vie</span>
                 <span class="stat-value" id="health">20</span>
               </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item" data-ui-tooltip="Nombre total de monstres que vous avez tués. Les kills font progresser vos recherches en cours.">
               <span class="stat-icon">💀</span>
               <div class="stat-content">
                 <span class="stat-label">Kills</span>
                 <span class="stat-value" id="kills">0</span>
               </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item" data-ui-tooltip="Or total dépensé en attaque (envoi de monstres). Sert à débloquer et utiliser votre compétence de classe.">
               <span class="stat-icon">⚔️</span>
               <div class="stat-content">
                 <span class="stat-label">Attaque</span>
                 <span class="stat-value" id="attack-gold-display">0</span>
               </div>
             </div>
-            <button onclick="toggleResearchPanel()" class="btn-research-toggle" id="research-button">🔬 Recherche</button>
-            <button onclick="useActiveSkill()" class="btn-skill hidden" id="skill-button" title="Utiliser votre compétence de classe">⚡ Compétence</button>
-            <button onclick="toggleMonsterAuras()" class="btn-aura-toggle active" id="aura-button" title="Afficher/masquer les auras des monstres">👁️ Auras ON</button>
-            <button onclick="quitGame()" class="btn-quit">🚪 Quitter</button>
+            <button onclick="toggleResearchPanel()" class="btn-research-toggle" id="research-button" data-ui-tooltip="Ouvrir l'arbre de recherche. Recherchez des améliorations pour vos tours (défense) ou vos monstres (attaque). Progressez en tuant des monstres.">🔬 Recherche</button>
+            <button onclick="useActiveSkill()" class="btn-skill hidden" id="skill-button" data-ui-tooltip="">⚡ Compétence</button>
+            <button onclick="toggleMonsterAuras()" class="btn-aura-toggle active" id="aura-button" data-ui-tooltip="Afficher ou masquer les cercles d'aura des monstres spéciaux (soigneur, paralyseur). Utile pour réduire le clutter visuel.">👁️ Auras ON</button>
+            <button onclick="quitGame()" class="btn-quit" data-ui-tooltip="Quitter la partie en cours. Attention : vous serez éliminé !">🚪 Quitter</button>
+          </div>
+
+          <!-- Bandeau indicateurs de jeu -->
+          <div class="game-info-bar" id="game-info-bar">
+            <div class="info-bar-item" id="wave-indicator" data-ui-tooltip="Manche actuelle. Les manches augmentent automatiquement toutes les 30s. Plus la manche est élevée, plus les monstres sont forts et variés.">
+              <span class="info-bar-icon">🌊</span>
+              <span class="info-bar-label">Manche</span>
+              <span class="info-bar-value" id="wave-number">1</span>
+            </div>
+            <div class="info-bar-separator"></div>
+            <div class="info-bar-item" id="spawn-indicator" data-ui-tooltip="Capacité de spawn auto. Les monstres ennemis sont générés automatiquement. Plus le budget est élevé, plus ils arrivent en nombre.">
+              <span class="info-bar-icon">👹</span>
+              <span class="info-bar-label">Budget spawn</span>
+              <span class="info-bar-value" id="spawn-budget">0</span>
+            </div>
+            <div class="info-bar-separator"></div>
+            <div class="info-bar-item" id="time-indicator" data-ui-tooltip="Temps écoulé depuis le début de la partie. Les vagues changent à des moments précis.">
+              <span class="info-bar-icon">⏱️</span>
+              <span class="info-bar-label">Temps</span>
+              <span class="info-bar-value" id="game-time-display">0:00</span>
+            </div>
+            <div class="info-bar-separator"></div>
+            <div class="info-bar-item" id="available-monsters-indicator" data-ui-tooltip="Types de monstres qui apparaissent actuellement sur votre chemin. De nouveaux types se débloquent avec les manches.">
+              <span class="info-bar-icon">📋</span>
+              <span class="info-bar-label">Monstres actifs</span>
+              <span class="info-bar-value" id="active-monsters-list">🔴</span>
+            </div>
+            <div class="info-bar-separator"></div>
+            <div class="info-bar-item" id="next-wave-indicator" data-ui-tooltip="Événement suivant prévu. Préparez-vous en conséquence !">
+              <span class="info-bar-icon">⏭️</span>
+              <span class="info-bar-label">Prochain</span>
+              <span class="info-bar-value" id="next-event-text">Monstres dans 15s</span>
+            </div>
           </div>
 
           <!-- Centre: Carte de jeu -->
@@ -279,8 +312,8 @@
           <div class="right-section">
             <h3>👹 Monstres</h3>
             <div class="monster-shop">
-              <label class="target-label">Cible:</label>
-              <select id="target-player" class="target-select">
+              <label class="target-label" data-ui-tooltip="Choisissez le joueur à qui envoyer des monstres. 'Tout le monde' envoie à tous les joueurs vivants avec une réduction de 20% sur le coût.">Cible:</label>
+              <select id="target-player" class="target-select" data-ui-tooltip="Sélectionnez votre cible. Les monstres envoyés apparaîtront sur leur chemin avec les PV de la manche actuelle.">
                 <option value="">Choisir un joueur</option>
                 <option value="everyone">🌍 TOUT LE MONDE (-20%)</option>
               </select>

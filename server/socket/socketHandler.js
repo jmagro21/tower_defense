@@ -10,6 +10,42 @@ const playerRooms = new Map(); // socketId -> room code
 const disconnectedPlayers = new Map(); // odlSocketId -> { timeout, roomCode, userId, playerData }
 const userToSocket = new Map(); // odlSocketId -> newSocketId (pour la reconnexion)
 
+// ========================================
+// ANTI-CHEAT: Rate limiter par socket
+// ========================================
+const rateLimits = new Map(); // socketId -> { event: { count, lastReset } }
+
+function checkRateLimit(socketId, event, maxPerSecond = 10) {
+  if (!rateLimits.has(socketId)) rateLimits.set(socketId, {});
+  const limits = rateLimits.get(socketId);
+  const now = Date.now();
+  
+  if (!limits[event]) limits[event] = { count: 0, lastReset: now };
+  
+  // Reset every second
+  if (now - limits[event].lastReset > 1000) {
+    limits[event].count = 0;
+    limits[event].lastReset = now;
+  }
+  
+  limits[event].count++;
+  return limits[event].count <= maxPerSecond;
+}
+
+function cleanupRateLimit(socketId) {
+  rateLimits.delete(socketId);
+}
+
+// ANTI-CHEAT: Validation helpers
+function isValidNumber(val, min = -Infinity, max = Infinity) {
+  return typeof val === 'number' && isFinite(val) && val >= min && val <= max;
+}
+
+function sanitizeString(str, maxLength = 50) {
+  if (typeof str !== 'string') return '';
+  return str.slice(0, maxLength).replace(/[<>"'&]/g, '');
+}
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -204,24 +240,23 @@ module.exports = (io) => {
       if (data.gameSettings) {
         const { startingMoney, maxHealth, monsterIntensity, rewardMultiplier, spawnSpeed } = data.gameSettings;
         
-        // Appliquer les paramètres à chaque joueur
+        // ANTI-CHEAT: Valider et borner les paramètres de jeu
+        const validatedSettings = {
+          startingMoney: Math.min(Math.max(Math.floor(Number(startingMoney) || 500), 100), 5000),
+          maxHealth: Math.min(Math.max(Math.floor(Number(maxHealth) || 20), 5), 100),
+          monsterIntensity: [0.8, 1.0, 1.2, 1.5].includes(Number(monsterIntensity)) ? Number(monsterIntensity) : 1.0,
+          rewardMultiplier: [0.5, 1.0, 1.5, 2.0].includes(Number(rewardMultiplier)) ? Number(rewardMultiplier) : 1.0,
+          spawnSpeed: ['slow', 'normal', 'fast', 'hard'].includes(spawnSpeed) ? spawnSpeed : 'normal'
+        };
+        
+        // Appliquer les paramètres validés à chaque joueur
         room.players.forEach(player => {
-          if (startingMoney !== undefined) {
-            player.money = startingMoney;
-          }
-          if (maxHealth !== undefined) {
-            player.maxHealth = maxHealth;
-          }
+          player.money = validatedSettings.startingMoney;
+          player.maxHealth = validatedSettings.maxHealth;
         });
         
-        // Stocker les paramètres globaux dans la room
-        room.gameSettings = {
-          startingMoney: startingMoney || 500,
-          maxHealth: maxHealth || 20,
-          monsterIntensity: monsterIntensity || 1.0,
-          rewardMultiplier: rewardMultiplier || 1.0,
-          spawnSpeed: spawnSpeed || 'normal'
-        };
+        // Stocker les paramètres globaux validés dans la room
+        room.gameSettings = validatedSettings;
       }
 
       room.startGame();
@@ -234,12 +269,19 @@ module.exports = (io) => {
 
     // Placer une tour
     socket.on(SOCKET_EVENTS.PLACE_TOWER, ({ towerType, x, y }) => {
+      if (!checkRateLimit(socket.id, 'PLACE_TOWER', 5)) return;
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
 
-      const tower = TOWER_TYPES[towerType.toUpperCase()];
+      // ANTI-CHEAT: Valider le type de tour
+      const sanitizedType = sanitizeString(towerType, 20).toUpperCase();
+      const tower = TOWER_TYPES[sanitizedType];
       if (!tower) return;
+
+      // ANTI-CHEAT: Valider les coordonnées (dans la grille)
+      if (!isValidNumber(x, 0, 880) || !isValidNumber(y, 0, 680)) return;
 
       const success = room.placeTower(socket.id, { ...tower, x, y });
       if (success) {
@@ -252,6 +294,7 @@ module.exports = (io) => {
 
     // Améliorer une tour
     socket.on('UPGRADE_TOWER', ({ towerId, x, y }) => {
+      if (!checkRateLimit(socket.id, 'UPGRADE_TOWER', 10)) return;
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -335,6 +378,7 @@ module.exports = (io) => {
 
     // Améliorer une tour directement à un niveau spécifique
     socket.on('UPGRADE_TOWER_MULTI', ({ x, y, targetLevel }) => {
+      if (!checkRateLimit(socket.id, 'UPGRADE_TOWER_MULTI', 3)) return;
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -417,6 +461,7 @@ module.exports = (io) => {
 
     // Déplacer une tour
     socket.on('MOVE_TOWER', ({ oldX, oldY, newX, newY }) => {
+      if (!checkRateLimit(socket.id, 'MOVE_TOWER', 3)) return;
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -449,6 +494,7 @@ module.exports = (io) => {
 
     // Supprimer une tour
     socket.on('SELL_TOWER', ({ x, y }) => {
+      if (!checkRateLimit(socket.id, 'SELL_TOWER', 5)) return;
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -475,6 +521,7 @@ module.exports = (io) => {
 
     // Démolisseur : tour détruite
     socket.on('TOWER_DESTROYED_BY_DEMOLISHER', ({ x, y }) => {
+      if (!checkRateLimit(socket.id, 'TOWER_DESTROYED', 5)) return;
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -490,6 +537,8 @@ module.exports = (io) => {
 
     // Démolisseur : tour rétrogradée
     socket.on('TOWER_DOWNGRADED_BY_DEMOLISHER', ({ x, y, newLevel }) => {
+      if (!checkRateLimit(socket.id, 'TOWER_DOWNGRADED', 5)) return;
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -499,12 +548,16 @@ module.exports = (io) => {
 
       const tower = player.towers.find(t => t.x === x && t.y === y);
       if (tower) {
-        tower.level = newLevel;
+        // ANTI-CHEAT: Le niveau ne peut que diminuer de 1, pas plus, et pas en dessous de 1
+        const expectedLevel = Math.max(1, (tower.level || 1) - 1);
+        tower.level = expectedLevel;
       }
     });
 
     // Envoyer un monstre
     socket.on(SOCKET_EVENTS.SEND_MONSTER, ({ targetPlayer, monsterType, monster }) => {
+      if (!checkRateLimit(socket.id, 'SEND_MONSTER', 5)) return; // Max 5/sec
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
@@ -514,23 +567,42 @@ module.exports = (io) => {
       const monsterConfig = MONSTER_TYPES[monsterType.toUpperCase()];
       if (!player || !monsterConfig || !monster) return;
 
-      // Utiliser le coût envoyé par le client (avec bonus de recherche et réductions)
-      // Anti-cheat: ne pas accepter un coût inférieur à 50% du coût de base
+      // ANTI-CHEAT: Valider le targetPlayer
+      const sanitizedTarget = sanitizeString(targetPlayer, 30);
+      const targetSocket = Array.from(room.players.keys())
+        .find(sid => room.players.get(sid).username === sanitizedTarget);
+      if (!targetSocket) return; // Cible invalide
+      
+      // ANTI-CHEAT: Ne pas permettre de s'envoyer des monstres à soi-même
+      if (sanitizedTarget === currentUser?.username) return;
+
+      // ANTI-CHEAT: Calculer le coût côté serveur avec clamping
+      // Le coût minimum est 50% du base (pour les bonus de recherche)
       const baseCost = monsterConfig.cost;
-      const minAllowedCost = Math.floor(baseCost * 0.5);
-      const clientCost = monster.cost || baseCost;
-      const finalCost = (clientCost >= minAllowedCost) ? clientCost : baseCost;
+      const minAllowedCost = Math.floor(baseCost * 0.3); // 30% minimum (recherche max)
+      const clientCost = isValidNumber(monster.cost, 0, baseCost * 10) ? monster.cost : baseCost;
+      const finalCost = Math.max(clientCost, minAllowedCost);
 
       if (player.money < finalCost) return;
       player.money -= finalCost;
 
-      // Envoyer le monstre au joueur cible
-      const targetSocket = Array.from(room.players.keys())
-        .find(sid => room.players.get(sid).username === targetPlayer);
+      // ANTI-CHEAT: Borner les stats du monstre envoyé
+      // Les HP ne peuvent pas dépasser 10x le base
+      // La vitesse ne peut pas dépasser 3x le base
+      const maxAllowedHP = monsterConfig.health * 10;
+      const maxAllowedSpeed = monsterConfig.speed * 3;
+      const sanitizedMonster = {
+        ...monsterConfig,
+        ...monster,
+        health: isValidNumber(monster.health, 1, maxAllowedHP) ? Math.floor(monster.health) : monsterConfig.health,
+        speed: isValidNumber(monster.speed, 1, maxAllowedSpeed) ? Math.floor(monster.speed) : monsterConfig.speed,
+        reward: isValidNumber(monster.reward, 0, monsterConfig.reward * 5) ? Math.floor(monster.reward) : monsterConfig.reward,
+        cost: finalCost
+      };
 
       if (targetSocket) {
         io.to(targetSocket).emit(SOCKET_EVENTS.MONSTER_SENT, {
-          monster,
+          monster: sanitizedMonster,
           sender: currentUser.username
         });
       }
@@ -542,13 +614,20 @@ module.exports = (io) => {
 
     // Monstre tué
     socket.on(SOCKET_EVENTS.MONSTER_KILLED, ({ monsterId, reward }) => {
+      if (!checkRateLimit(socket.id, 'MONSTER_KILLED', 30)) return; // Max 30 kills/sec
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
 
+      // ANTI-CHEAT: Borner le reward à une valeur raisonnable
+      // Le reward max possible est BIGBOSS (1500) * rewardMultiplier (max 2.0) * goldMultiplier (x2) × marge
+      const maxReward = 1500 * (room.gameSettings?.rewardMultiplier || 1.0) * 3;
+      const safeReward = isValidNumber(reward, 0, maxReward) ? Math.floor(reward) : 0;
+
       // Rééquilibrage : multiplicateur global sur le gain d'or par mob tué
       const goldMultiplier = 0.7; // 70% du reward de base (ajuste ici pour équilibrer)
-      const balancedReward = Math.floor(reward * goldMultiplier);
+      const balancedReward = Math.floor(safeReward * goldMultiplier);
 
       room.addMoney(socket.id, balancedReward);
       room.monsterKilledByPlayer(socket.id); // Décrémenter le compteur de monstres
@@ -567,13 +646,18 @@ module.exports = (io) => {
 
     // Mise à jour des golds d'attaque
     socket.on('UPDATE_ATTACK_GOLD', ({ attackGold }) => {
+      if (!checkRateLimit(socket.id, 'UPDATE_ATTACK_GOLD', 5)) return;
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
 
       const player = room.players.get(socket.id);
       if (player) {
-        player.attackGold = attackGold;
+        // ANTI-CHEAT: attackGold ne peut qu'augmenter (on ne peut pas réduire ses dépenses)
+        const newAttackGold = isValidNumber(attackGold, 0, 10000000) ? Math.floor(attackGold) : player.attackGold;
+        if (newAttackGold < (player.attackGold || 0)) return; // Ne peut pas diminuer
+        player.attackGold = newAttackGold;
         
         // Envoyer les stats mises à jour de tous les joueurs
         io.to(roomCode).emit('PLAYERS_STATS_UPDATE', {
@@ -584,12 +668,19 @@ module.exports = (io) => {
 
     // Monstre passé
     socket.on(SOCKET_EVENTS.MONSTER_PASSED, (data) => {
+      if (!checkRateLimit(socket.id, 'MONSTER_PASSED', 30)) return;
+      
       const roomCode = playerRooms.get(socket.id);
       const room = rooms.get(roomCode);
       if (!room) return;
 
-      // Récupérer le multiplicateur de dégâts (0.85 pour lastchance, 1.0 par défaut)
-      const damageMultiplier = data && typeof data.damage === 'number' ? data.damage : 1.0;
+      // ANTI-CHEAT: Valider et borner le multiplicateur de dégâts
+      // Seule valeur légitime: 0.85 (classe lastchance) ou 1.0 (normal)
+      let damageMultiplier = 1.0;
+      if (data && typeof data.damage === 'number') {
+        // N'accepter que 0.85 ou 1.0 exactement
+        damageMultiplier = (data.damage >= 0.84 && data.damage <= 0.86) ? 0.85 : 1.0;
+      }
       const playerLost = room.monsterPassed(socket.id, damageMultiplier);
       
       // Envoyer les stats mises à jour de tous les joueurs
@@ -637,6 +728,7 @@ module.exports = (io) => {
 
     socket.on('disconnect', () => {
       console.log(`Client déconnecté: ${socket.id}`);
+      cleanupRateLimit(socket.id);
       handleDisconnect(false); // forceLeave = false, délai de grâce
     });
 
@@ -691,6 +783,8 @@ module.exports = (io) => {
     // ===== SYSTÈME SPECTATEUR =====
     // Le client envoie ses données de map pour permettre le spectateur
     socket.on('broadcastMapState', (data) => {
+      if (!checkRateLimit(socket.id, 'broadcastMapState', 3)) return; // Max 3/sec
+      
       const roomCode = playerRooms.get(socket.id);
       if (!roomCode) return;
       
@@ -700,12 +794,21 @@ module.exports = (io) => {
       const player = room.players.get(socket.id);
       if (!player) return;
       
+      // ANTI-CHEAT: Limiter la taille des données broadcastées
+      const maxTowers = 100;
+      const maxMonsters = 500;
+      const maxPathPoints = 20;
+      
+      const towers = Array.isArray(data.towers) ? data.towers.slice(0, maxTowers) : [];
+      const monsters = Array.isArray(data.monsters) ? data.monsters.slice(0, maxMonsters) : [];
+      const path = Array.isArray(data.path) ? data.path.slice(0, maxPathPoints) : [];
+      
       // Stocker les données de map du joueur pour les spectateurs
       player.mapState = {
-        path: data.path || [],
-        monsters: data.monsters || [],
-        towers: data.towers || [],
-        health: data.health !== undefined ? data.health : null
+        path: path,
+        monsters: monsters,
+        towers: towers,
+        health: isValidNumber(data.health, 0, 10000) ? data.health : null
       };
     });
     

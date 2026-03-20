@@ -69,6 +69,12 @@ async function login() {
 }
 
 function logout() {
+  // Supprimer le cookie côté serveur
+  fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include'
+  }).catch(() => {});
+  
   localStorage.removeItem('currentUser');
   localStorage.removeItem('currentRoom');
   localStorage.removeItem('gameState');
